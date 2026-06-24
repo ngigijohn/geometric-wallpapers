@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Generate high-resolution geometric and mathematical wallpapers with ease. Customize low-poly meshes, Voronoi cells, sacred geometry, isometric art, and fluid flow fields. Export in 4K resolution and vector SVG.">
+  <title>Geometric Wallpaper Studio - Premium Generative Art Engine</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Defer loading of JS scripts to guarantee DOM readiness -->
+  <script src="palettes.js" defer></script>
+  <script src="patterns.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- --- INTERACTIVE ARTWORK CANVAS --- -->
+    <div class="canvas-viewport" id="viewport">
+      <canvas id="mainCanvas"></canvas>
+    </div>
+
+    <!-- --- WORKSPACE UTILITIES (BOTTOM-LEFT FLOATING) --- -->
+    <div class="workspace-controls">
+      <button class="control-circle disabled" id="undoBtn" title="Undo Last Change" aria-label="Undo Last Change">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7v6h6"></path>
+          <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
+        </svg>
+      </button>
+      <button class="control-circle disabled" id="redoBtn" title="Redo" aria-label="Redo Last Change">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 7v6h-6"></path>
+          <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"></path>
+        </svg>
+      </button>
+      <button class="control-circle" id="shuffleBtn" title="Shuffle Settings & Seed" aria-label="Shuffle Settings and Seed">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 3h5v5"></path>
+          <path d="M4 20L21 3"></path>
+          <path d="M21 16v5h-5"></path>
+          <path d="M15 15l6 6"></path>
+          <path d="M4 4l5 5"></path>
+        </svg>
+      </button>
+      <button class="control-circle" id="fullScreenBtn" title="Toggle Fullscreen Mode" aria-label="Toggle Fullscreen Mode">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
+          <path d="M21 8V5a2 2 0 0 0-2-2h-3"></path>
+          <path d="M3 16v3a2 2 0 0 0 2 2h3"></path>
+          <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- --- FLOATING SIDEBAR DASHBOARD --- -->
+    <div class="sidebar-dashboard" id="sidebar">
+      
+      <!-- Collapsible trigger tab -->
+      <div class="sidebar-collapse-trigger" id="collapseBtn" title="Hide Sidebar" role="button" tabindex="0" aria-label="Toggle Sidebar Navigation">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="collapseIcon">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </div>
+
+      <!-- Dashboard Header -->
+      <div class="sidebar-header">
+        <h1><span>GEOMETRIC</span> STUDIO</h1>
+        <p>Mathematical & Generative Wallpaper Suite</p>
+      </div>
+
+      <!-- Sidebar Tabs Navigation -->
+      <div class="tab-navigation">
+        <button class="tab-btn active" data-tab="tab-generators" title="Geometric Engine Types">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+          </svg>
+          Engines
+        </button>
+        <button class="tab-btn" data-tab="tab-settings" title="Engine Fine Tuning">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="21" x2="4" y2="14"></line>
+            <line x1="4" y1="10" x2="4" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12" y2="3"></line>
+            <line x1="20" y1="21" x2="20" y2="16"></line>
+            <line x1="20" y1="12" x2="20" y2="3"></line>
+            <line x1="1" y1="14" x2="7" y2="14"></line>
+            <line x1="9" y1="8" x2="15" y2="8"></line>
+            <line x1="17" y1="16" x2="23" y2="16"></line>
+          </svg>
+          Tuning
+        </button>
+        <button class="tab-btn" data-tab="tab-colors" title="Color Palettes & Harmonies">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 14.7255 3.09032 17.1962 4.85857 19C5.34633 19.4878 5.48512 20.2194 5.20786 20.8524L5.12727 21.0366C4.94532 21.4525 5.20708 21.9362 5.65935 21.9844C6.27598 22.0501 6.94056 22 7.5 22C8.32843 22 9 21.3284 9 20.5C9 19.6716 9.67157 19 10.5 19C11.3284 19 12 19.6716 12 20.5C12 21.3284 12.6716 22 13.5 22H12Z"></path>
+          </svg>
+          Colors
+        </button>
+        <button class="tab-btn" data-tab="tab-exports" title="Save Gallery & Download Tools">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Export
+        </button>
+      </div>
+
+      <!-- Sidebar Scrollable Tab Panels -->
+      <div class="tab-content">
+        
+        <!-- --- PANEL 1: ENGINES --- -->
+        <div class="tab-panel active" id="tab-generators">
+          <div class="control-group">
+            <span class="control-label" style="font-family:'Outfit'; font-size:13px; font-weight:500; color:var(--text-secondary); margin-bottom:8px;">Select Geometric Engine</span>
+            <div class="pattern-grid">
+              
+              <div class="pattern-card active" data-pattern="lowpoly">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <span>Low Poly</span>
+              </div>
+              
+              <div class="pattern-card" data-pattern="voronoi">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                </svg>
+                <span>Voronoi</span>
+              </div>
+
+              <div class="pattern-card" data-pattern="sacred">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <circle cx="12" cy="12" r="6"></circle>
+                  <circle cx="12" cy="12" r="2"></circle>
+                </svg>
+                <span>Sacred Geo</span>
+              </div>
+
+              <div class="pattern-card" data-pattern="bauhaus">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                  <circle cx="9" cy="9" r="4"></circle>
+                  <line x1="14" y1="14" x2="20" y2="20"></line>
+                </svg>
+                <span>Bauhaus</span>
+              </div>
+
+              <div class="pattern-card" data-pattern="isometric">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="21 16 12 21 3 16 12 11 21 16"></polyline>
+                  <polyline points="12 11 12 21"></polyline>
+                  <polyline points="21 6 12 11 3 6 12 1 21 6"></polyline>
+                  <polyline points="12 1 12 11"></polyline>
+                  <polyline points="3 6 3 16"></polyline>
+                  <polyline points="21 6 21 16"></polyline>
+                </svg>
+                <span>Isometric</span>
+              </div>
+
+              <div class="pattern-card" data-pattern="flowfields">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12c5-5 15-5 20 0"></path>
+                  <path d="M2 7c5-5 15-5 20 0"></path>
+                  <path d="M2 17c5-5 15-5 20 0"></path>
+                </svg>
+                <span>Flow Waves</span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Description and interact tip -->
+          <div class="harmony-editor">
+            <h4 style="font-size:14px; margin-bottom:4px;" id="engineTitle">Low Poly Delaunay</h4>
+            <p style="font-size:12px; color:var(--text-secondary); line-height:1.5;" id="engineDesc">
+              Generates a detailed Delaunay triangulation mesh across a randomized coordinate field. Looks stunning in both gradient shading and glowing wireframes.
+            </p>
+            <div style="font-size:11px; color:var(--accent); font-weight:600; display:flex; align-items:center; gap:6px; margin-top:8px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--accent)"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+              <span>Canvas Tip: Click or Drag directly to add vertices!</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- --- PANEL 2: TUNING --- -->
+        <div class="tab-panel" id="tab-settings">
+          
+          <!-- Shared and dynamic density sliders -->
+          <div class="control-group">
+            <label for="slider-density">Shape Complexity / Density <span class="val-display" id="val-density">50</span></label>
+            <input type="range" id="slider-density" min="10" max="250" value="50">
+          </div>
+
+          <div class="control-group" id="group-randomness">
+            <label for="slider-randomness">Structural Jitter / Noise <span class="val-display" id="val-randomness">1.0</span></label>
+            <input type="range" id="slider-randomness" min="0.0" max="2.0" step="0.1" value="1.0">
+          </div>
+
+          <div class="control-group" id="group-scale">
+            <label for="slider-scale">Proportional Scale <span class="val-display" id="val-scale">1.0</span></label>
+            <input type="range" id="slider-scale" min="0.2" max="3.0" step="0.1" value="1.0">
+          </div>
+
+          <div class="control-group" id="group-strokeWidth">
+            <label for="slider-strokeWidth">Stroke Grid Thickness <span class="val-display" id="val-strokeWidth">1</span></label>
+            <input type="range" id="slider-strokeWidth" min="0" max="8" value="1">
+          </div>
+
+          <!-- Voronoi Spacing option -->
+          <div class="control-group" id="group-cellGap" style="display:none;">
+            <label for="slider-cellGap">Mosaic Border Spacing <span class="val-display" id="val-cellGap">0</span></label>
+            <input type="range" id="slider-cellGap" min="0" max="10" value="0">
+          </div>
+
+          <!-- Filling Styles Selection -->
+          <div class="control-group" id="group-fillType">
+            <label for="select-fillType">Shape Color Style</label>
+            <select id="select-fillType">
+              <option value="solid">Flat Shading (Minimalist)</option>
+              <option value="gradient" selected>Interpolated Gradients (Premium)</option>
+              <option value="neon">Neon HUD Glowing Wireframe</option>
+            </select>
+          </div>
+
+          <div class="control-group" id="group-shadingMode">
+            <label for="select-shadingMode">Color Interpolation Grid</label>
+            <select id="select-shadingMode">
+              <option value="linear">Linear Angle Span</option>
+              <option value="radial">Concentric Centroid Distance</option>
+              <option value="noise" selected>Procedural Mathematical Noise</option>
+            </select>
+          </div>
+
+          <!-- Sacred Geometry concentric details -->
+          <div class="control-group" id="group-symmetry" style="display:none;">
+            <label for="slider-symmetry">Reflection Symmetry Facets <span class="val-display" id="val-symmetry">12</span></label>
+            <input type="range" id="slider-symmetry" min="4" max="32" value="12">
+          </div>
+
+          <div class="control-group" id="group-flowerGrid" style="display:none;">
+            <div class="toggle-row">
+              <label for="check-flowerGrid">Underlay Hexagonal Circle Grids</label>
+              <div class="switch">
+                <input type="checkbox" id="check-flowerGrid" checked aria-label="Underlay Hexagonal Circle Grids">
+                <span class="slider"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bauhaus Paper Grain details -->
+          <div class="control-group" id="group-grain" style="display:none;">
+            <div class="toggle-row">
+              <label for="check-grain">Grainy Fiber Paper Filter Overlay</label>
+              <div class="switch">
+                <input type="checkbox" id="check-grain" checked aria-label="Grainy Fiber Paper Filter Overlay">
+                <span class="slider"></span>
+              </div>
+            </div>
+            <label for="slider-grainAmount" class="sr-only">Grain Intensity</label>
+            <input type="range" id="slider-grainAmount" min="0.1" max="2.0" step="0.1" value="1.0">
+          </div>
+
+          <!-- --- LIVE SCREEN-SAVER MORPHING --- -->
+          <div class="harmony-editor">
+            <h4 style="font-size:13px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+              <label for="check-morph" style="font-family:'Outfit'; font-weight:600; margin:0; cursor:pointer;">Live Screensaver Morphing</label>
+              <div class="switch">
+                <input type="checkbox" id="check-morph" checked aria-label="Live Screensaver Morphing">
+                <span class="slider"></span>
+              </div>
+            </h4>
+            <p style="font-size:11px; color:var(--text-secondary);">Simulates organic morph dynamics slowly drifting and rotating shape arrays.</p>
+            
+            <div class="control-group" style="margin-top:8px;">
+              <label for="slider-morphSpeed">Morph Flow Speed <span class="val-display" id="val-morphSpeed">1.0</span></label>
+              <input type="range" id="slider-morphSpeed" min="0.1" max="4.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="control-group">
+              <label for="slider-morphAmount">Morph Amplitude <span class="val-display" id="val-morphAmount">1.0</span></label>
+              <input type="range" id="slider-morphAmount" min="0.1" max="3.0" step="0.1" value="1.0">
+            </div>
+          </div>
+
+        </div>
+
+        <!-- --- PANEL 3: COLOR SCHEMES --- -->
+        <div class="tab-panel" id="tab-colors">
+          
+          <!-- Curated Palettes List -->
+          <div class="control-group">
+            <label>Pre-Coded Premium Schemes</label>
+            <div class="palette-list" id="paletteList">
+              <!-- JS will inject curated items dynamically here -->
+            </div>
+          </div>
+
+          <!-- Color Theory Generator -->
+          <div class="control-group">
+            <label for="harmonySeed">Custom Seed Harmonizer</label>
+            <div class="harmony-editor">
+              <p style="font-size:11px; color:var(--text-secondary); margin-bottom:4px;">
+                Choose a seed color and apply math color theory rules to auto-generate a balanced, stunning palette.
+              </p>
+              
+              <div class="picker-row">
+                <div class="picker-wrapper">
+                  <input type="color" id="harmonySeed" value="#c5a059" aria-label="Seed Color">
+                </div>
+                <div class="harmony-select-wrapper">
+                  <label for="harmonyRule" class="sr-only">Harmony Rule</label>
+                  <select id="harmonyRule">
+                    <option value="analogous" selected>Analogous (Sleek Blends)</option>
+                    <option value="triadic">Triadic (Vibrant Contrast)</option>
+                    <option value="complementary">Complementary (High Pop)</option>
+                    <option value="split">Split Complementary</option>
+                    <option value="monochromatic">Monochromatic (Smooth Tones)</option>
+                  </select>
+                </div>
+              </div>
+
+              <button class="btn btn-secondary" id="generatePaletteBtn" style="width: 100%;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                Apply Custom Harmony
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- --- PANEL 4: EXPORT TOOLS --- -->
+        <div class="tab-panel" id="tab-exports">
+          
+          <!-- Ratio presets -->
+          <div class="control-group">
+            <span class="control-label" style="font-family:'Outfit'; font-size:13px; font-weight:500; color:var(--text-secondary); margin-bottom:8px;">Select Workspace Aspect Ratio</span>
+            <div class="export-grid">
+              
+              <div class="ratio-card active" data-ratio="16:9">
+                <div class="ratio-icon"></div>
+                <span>Desktop (16:9)</span>
+                <span class="res">3840 &times; 2160 (4K UHD)</span>
+              </div>
+ 
+              <div class="ratio-card" data-ratio="9:16">
+                <div class="ratio-icon mobile"></div>
+                <span>Mobile (9:16)</span>
+                <span class="res">1440 &times; 3200 (QHD+)</span>
+              </div>
+ 
+              <div class="ratio-card" data-ratio="4:3">
+                <div class="ratio-icon tablet"></div>
+                <span>Tablet (4:3)</span>
+                <span class="res">2048 &times; 2732 (Retina)</span>
+              </div>
+ 
+              <div class="ratio-card" data-ratio="1:1">
+                <div class="ratio-icon square"></div>
+                <span>Square (1:1)</span>
+                <span class="res">2048 &times; 2048 (Hi-Res)</span>
+              </div>
+ 
+            </div>
+          </div>
+ 
+          <!-- Download Action Buttons -->
+          <div class="control-group">
+            <span class="control-label" style="font-family:'Outfit'; font-size:13px; font-weight:500; color:var(--text-secondary); margin-bottom:8px;">Download Wallpaper Artwork</span>
+            <div class="palette-list">
+              <button class="btn" id="downloadPngBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Download PNG (High-DPI)
+              </button>
+              
+              <button class="btn btn-secondary" id="downloadSvgBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                Export Scalable Vector (SVG)
+              </button>
+            </div>
+          </div>
+ 
+          <!-- Gallery Favorites Container -->
+          <div class="gallery-section">
+            <div style="font-family:'Outfit'; font-size:13px; font-weight:500; color:var(--text-secondary); display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span>Saved Studio Creations</span>
+              <button class="btn btn-secondary" id="saveGalleryBtn" style="padding: 6px 12px; font-size:11px;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px; height:12px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Save Current
+              </button>
+            </div>
+ 
+            <div class="gallery-grid" id="galleryGrid">
+              <!-- Local storage saved files will load dynamically -->
+              <div class="gallery-empty">No saved wallpapers found. Click "Save Current" above to compile one in local storage.</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

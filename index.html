@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Generate high-resolution geometric and mathematical wallpapers with ease. Customize low-poly meshes, Voronoi cells, sacred geometry, isometric art, and fluid flow fields. Export in 4K resolution and vector SVG.">
   <title>Geometric Wallpaper Studio - Premium Generative Art Engine</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,5 95,75 5,75' fill='%23c5a059'/></svg>">
   <link rel="stylesheet" href="styles.css">
   <!-- Defer loading of JS scripts to guarantee DOM readiness -->
   <script src="palettes.js" defer></script>
@@ -213,6 +214,12 @@
           <div class="control-group" id="group-cellGap" style="display:none;">
             <label for="slider-cellGap">Mosaic Border Spacing <span class="val-display" id="val-cellGap">0</span></label>
             <input type="range" id="slider-cellGap" min="0" max="10" value="0">
+          </div>
+
+          <!-- Neon Glow Intensity (visible only when neon fill is active) -->
+          <div class="control-group" id="group-glowAmount" style="display:none;">
+            <label for="slider-glowAmount">Neon Glow Intensity <span class="val-display" id="val-glowAmount">12</span></label>
+            <input type="range" id="slider-glowAmount" min="0" max="40" value="12">
           </div>
 
           <!-- Filling Styles Selection -->

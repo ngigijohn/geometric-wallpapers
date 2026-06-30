@@ -16,6 +16,7 @@ const App = {
       scale: 1.0,
       strokeWidth: 1,
       cellGap: 0,
+      glowAmount: 12,
       fillType: "gradient",
       shadingMode: "noise",
       symmetry: 12,
@@ -307,7 +308,8 @@ const App = {
       { id: "slider-symmetry", key: "symmetry" },
       { id: "slider-morphSpeed", key: "morphSpeed" },
       { id: "slider-morphAmount", key: "morphAmount" },
-      { id: "slider-grainAmount", key: "grainAmount" }
+      { id: "slider-grainAmount", key: "grainAmount" },
+      { id: "slider-glowAmount", key: "glowAmount" }
     ];
 
     rangeSliders.forEach(slider => {
@@ -342,6 +344,10 @@ const App = {
       if (el) {
         el.addEventListener("change", (e) => {
           self.state.settings[sel.key] = e.target.value;
+          if (sel.key === "fillType") {
+            const glowGroup = document.getElementById("group-glowAmount");
+            if (glowGroup) glowGroup.style.display = e.target.value === "neon" ? "flex" : "none";
+          }
           self.history.saveState(self.state);
           self.triggerRender();
         });
@@ -522,7 +528,7 @@ const App = {
     this.toggleEngineInputs(this.state.pattern);
 
     // Sync sliders
-    const sliders = ["density", "randomness", "scale", "strokeWidth", "cellGap", "symmetry", "morphSpeed", "morphAmount", "grainAmount"];
+    const sliders = ["density", "randomness", "scale", "strokeWidth", "cellGap", "symmetry", "morphSpeed", "morphAmount", "grainAmount", "glowAmount"];
     sliders.forEach(key => {
       const el = document.getElementById(`slider-${key}`);
       const valDisplay = document.getElementById(`val-${key}`);
@@ -549,6 +555,10 @@ const App = {
       const el = document.getElementById(chk.id);
       if (el) el.checked = chk.val;
     });
+
+    // Sync glow visibility
+    const glowGroup = document.getElementById("group-glowAmount");
+    if (glowGroup) glowGroup.style.display = settings.fillType === "neon" ? "flex" : "none";
 
     // Sync aspect cards
     document.querySelectorAll(".ratio-card").forEach(c => {

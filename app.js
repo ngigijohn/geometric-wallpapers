@@ -129,10 +129,12 @@ const App = {
     this.setupUIBindings();
     this.loadPresetPalettes();
     this.loadFavorites();
-    
+
     // Set aspect and size workspace
     this.resizeCanvas();
     window.addEventListener("resize", () => this.resizeCanvas());
+    // Re-fit after fonts/layout fully settle (important on mobile)
+    setTimeout(() => this.resizeCanvas(), 200);
 
     // Save baseline snapshot
     this.history.saveState(this.state);

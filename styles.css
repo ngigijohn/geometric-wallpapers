@@ -840,17 +840,55 @@ input:checked + .slider:before {
 
 /* Responsive sidebars */
 @media(max-width: 900px) {
-  .sidebar-dashboard {
-    width: calc(100% - 40px);
-    right: 20px;
-    left: 20px;
-    height: auto;
-    max-height: 80vh;
-    bottom: 20px;
-    top: auto;
+  .app-container {
+    flex-direction: column;
   }
+
+  .canvas-viewport {
+    /* Reserve the top portion for the canvas */
+    flex: 0 0 auto;
+    height: 52vh;
+    width: 100%;
+    padding: 10px;
+  }
+
+  #mainCanvas {
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .sidebar-dashboard {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    width: 100%;
+    flex: 1 1 auto;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-bottom: none;
+    overflow-y: auto;
+  }
+
   .sidebar-collapse-trigger {
     display: none;
+  }
+
+  /* Move workspace buttons to top-left so they don't overlap canvas */
+  .workspace-controls {
+    top: 10px;
+    bottom: auto;
+    left: 10px;
+  }
+
+  .control-circle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .control-circle svg {
+    width: 15px;
+    height: 15px;
   }
 }
 

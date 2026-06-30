@@ -840,24 +840,46 @@ input:checked + .slider:before {
 
 /* --- MOBILE BOTTOM-SHEET HANDLE --- */
 .sheet-handle {
-  display: none; /* hidden on desktop */
+  display: none; /* hidden on desktop, shown via media query */
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 10px 0 6px;
-  cursor: grab;
+  gap: 4px;
+  padding: 8px 0 6px;
+  cursor: pointer;
   flex-shrink: 0;
-  touch-action: none;
+  touch-action: manipulation;
+  border-bottom: 1px solid var(--border-glass);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .sheet-handle-pill {
-  width: 36px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 2px;
+  width: 44px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 3px;
   transition: background 0.2s ease;
 }
 
-.sheet-handle:hover .sheet-handle-pill,
+.sheet-handle-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.sheet-handle-label svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--accent);
+  transition: transform 0.3s ease;
+}
+
 .sheet-handle:active .sheet-handle-pill {
   background: var(--accent);
 }
@@ -885,6 +907,10 @@ input:checked + .slider:before {
     display: flex;
   }
 
+  .canvas-viewport {
+    transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
   .sidebar-dashboard {
     position: relative;
     top: auto;
@@ -897,21 +923,24 @@ input:checked + .slider:before {
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     border-bottom: none;
     overflow: hidden;
-    transition: flex-basis 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Minimized: only the handle + a sliver is visible */
-  .sidebar-dashboard.sheet-minimized {
-    flex: 0 0 28px;
-    overflow: hidden;
+  /* --- MINIMIZED STATE (class toggled on .app-container by JS) --- */
+  /* Canvas grows to take almost the whole screen */
+  .app-container.panel-collapsed .canvas-viewport {
+    height: calc(100vh - 58px);
   }
 
-  /* When minimized, let the canvas grow to fill freed space */
-  .sidebar-dashboard.sheet-minimized ~ .canvas-viewport,
-  .app-container:has(.sheet-minimized) .canvas-viewport {
-    flex: 1 1 auto;
-    height: auto;
+  /* Panel shrinks to just show the handle bar */
+  .app-container.panel-collapsed .sidebar-dashboard {
+    flex: 0 0 auto;
+    max-height: 58px;
+  }
+
+  /* Flip the chevron + swap label when collapsed */
+  .app-container.panel-collapsed .sheet-handle-label svg {
+    transform: rotate(180deg);
   }
 
   .sidebar-collapse-trigger {

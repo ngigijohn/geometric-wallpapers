@@ -245,11 +245,13 @@ const App = {
     // --- MOBILE SHEET HANDLE TOGGLE ---
     const sheetHandle = document.getElementById("sheetHandle");
     if (sheetHandle) {
+      const sheetText = document.getElementById("sheetHandleText");
       const toggleSheet = () => {
-        const sidebar = document.getElementById("sidebar");
-        sidebar.classList.toggle("sheet-minimized");
-        // After transition, re-fit canvas to new available space
-        setTimeout(() => self.resizeCanvas(), 370);
+        const container = document.querySelector(".app-container");
+        const collapsed = container.classList.toggle("panel-collapsed");
+        if (sheetText) sheetText.textContent = collapsed ? "Show Panel" : "Hide Panel";
+        // After the CSS transition, re-fit the canvas to the new space
+        setTimeout(() => self.resizeCanvas(), 380);
       };
       sheetHandle.addEventListener("click", toggleSheet);
       sheetHandle.addEventListener("keydown", (e) => {

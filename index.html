@@ -58,8 +58,14 @@
     <div class="sidebar-dashboard" id="sidebar">
 
       <!-- Mobile bottom-sheet drag handle -->
-      <div class="sheet-handle" id="sheetHandle" role="button" tabindex="0" aria-label="Toggle panel">
+      <div class="sheet-handle" id="sheetHandle" role="button" tabindex="0" aria-label="Minimize or expand panel">
         <div class="sheet-handle-pill"></div>
+        <div class="sheet-handle-label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="sheetHandleIcon">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+          <span id="sheetHandleText">Hide Panel</span>
+        </div>
       </div>
 
       <!-- Collapsible trigger tab -->

@@ -634,40 +634,51 @@ const Patterns = {
     ctx.fillStyle = colors[0];
     ctx.fillRect(0, 0, width, height);
 
-    let size = 30 * settings.scale; // grid unit size
+    let size = settings.cubeSize || 36; // dedicated cube size control
     let cos30 = Math.cos(Math.PI / 6);
     let sin30 = Math.sin(Math.PI / 6);
 
     // Calculate grid coverage range
     let colWidth = size * cos30;
-    let rowHeight = size * sin30 * 2;
-    
-    let cols = Math.ceil(width / colWidth) + 4;
-    let rows = Math.ceil(height / (size * sin30)) + 6;
+
+    let cols = Math.ceil(width / colWidth) + 6;
+    let rows = Math.ceil(height / (size * sin30)) + 10;
 
     // Apply isometric layout logic
     ctx.save();
-    
-    let speed = settings.morphSpeed * 0.001;
 
-    for (let r = -2; r < rows; r++) {
-      for (let c = -2; c < cols; c++) {
+    let speed = settings.morphSpeed * 0.001;
+    let t = time * speed;
+
+    // A slowly rotating wave direction makes the whole landscape feel alive,
+    // shifting where the peaks travel from rather than always pulsing from center.
+    let dirAng = t * 0.07;
+    let dirX = Math.cos(dirAng);
+    let dirY = Math.sin(dirAng);
+
+    let waveAmp = size * 1.4 * settings.morphAmount;
+    let freq = 1.7 / size; // wavelength scales with cube size
+
+    for (let r = -3; r < rows; r++) {
+      for (let c = -3; c < cols; c++) {
         // Calculate center coordinate
         let cx = (c - r) * size * cos30;
         let cy = (c + r) * size * sin30;
-        
+
         // Translate grid center coordinates to cover the screen properly
         cx += width / 2;
-        
-        // Wave-like dynamic height offset (Isometric 3D wave morphing)
+
+        // Layered height field: a travelling directional wave, a radial ripple,
+        // and a per-cube bob — combined into a rolling, organic 3D terrain.
         let dist = Math.sqrt((cx - width/2)**2 + (cy - height/2)**2);
-        let maxDist = Math.sqrt((width/2)**2 + (height/2)**2);
-        
+
         let waveOffset = 0;
         if (settings.morphAmount > 0) {
-          let waveFreq = 0.005 / settings.scale;
-          let waveAmp = size * 1.5 * settings.morphAmount;
-          waveOffset = Math.sin(dist * waveFreq - time * speed) * waveAmp;
+          let proj = cx * dirX + cy * dirY;
+          let w1 = Math.sin(proj * freq - t * 1.4);
+          let w2 = Math.sin(dist * freq * 0.85 - t * 1.1);
+          let w3 = Math.sin((c * 0.6 + r * 0.45) - t * 0.6) * 0.4;
+          waveOffset = (w1 * 0.55 + w2 * 0.45 + w3) * waveAmp;
         }
 
         let yOffset = cy + waveOffset;
@@ -677,12 +688,15 @@ const Patterns = {
         let cubeColor = window.Palettes.interpolateColor(colors, Math.max(0, Math.min(1, factor)));
         let hsl = window.Palettes.hexToHsl(cubeColor);
 
+        // Peaks catch more light, valleys fall into shadow (height-based shading)
+        let lift = (waveOffset / (waveAmp + 1)) * 9;
+
         // Face 1: Top Face (bright)
-        let topColor = window.Palettes.hslToHex(hsl.h, hsl.s, Math.min(95, hsl.l + 10));
+        let topColor = window.Palettes.hslToHex(hsl.h, hsl.s, Math.min(96, hsl.l + 12 + lift));
         // Face 2: Left Face (medium shadow)
-        let leftColor = window.Palettes.hslToHex(hsl.h, hsl.s, Math.max(10, hsl.l - 12));
+        let leftColor = window.Palettes.hslToHex(hsl.h, hsl.s, Math.max(8, hsl.l - 12 + lift));
         // Face 3: Right Face (deep shadow)
-        let rightColor = window.Palettes.hslToHex(hsl.h, hsl.s, Math.max(5, hsl.l - 25));
+        let rightColor = window.Palettes.hslToHex(hsl.h, hsl.s, Math.max(4, hsl.l - 25 + lift));
 
         // Draw top rhombus
         ctx.fillStyle = topColor;
@@ -736,83 +750,86 @@ const Patterns = {
 
   // 6. --- FLOW FIELD WAVES PATTERN GENERATOR ---
   drawFlowWaves(ctx, width, height, colors, settings, time = 0) {
-    // Backdrop fill
+    // Backdrop fill (reads as open "sky" above the horizon)
     ctx.fillStyle = colors[0];
     ctx.fillRect(0, 0, width, height);
 
     let waveCount = settings.density || 8;
-    let waveAmplitude = 120 * settings.scale;
+    let waveAmplitude = 110 * settings.scale;
     let baseSpeed = settings.morphSpeed * 0.0002;
 
-    // Draw stacked wave landscapes from back to front
+    // Horizon position (0 = top, 1 = bottom). Back wave sits here; the rest
+    // cascade downward toward the viewer, filling the lower portion.
+    let basePos = (settings.wavePosition != null ? settings.wavePosition : 0.55);
+    let baseY = height * basePos;
+    let span = (height - baseY) * 0.95;
+
+    let steps = 24; // fewer sample points + curve smoothing => broad, rounded waves
+    let stepSize = width / steps;
+
+    // Low-frequency, gently rounded wave height at x for a given layer
+    const waveHeightAt = (x, w) => {
+      let nAngle = x * 0.0015;
+      let n1 = Math.sin(nAngle * 1.05 + time * baseSpeed + w * 1.5) * waveAmplitude * 0.8;
+      let n2 = Math.cos(nAngle * 2.0 - time * baseSpeed * 1.2 + w * 2.0) * waveAmplitude * 0.2;
+      return (n1 + n2) * settings.morphAmount;
+    };
+
+    // Draw a rounded curve through the points using quadratic midpoints.
+    // Assumes the current path point is already at pts[0].
+    const ridgeCurves = (pts) => {
+      for (let i = 0; i < pts.length - 1; i++) {
+        let xc = (pts[i].x + pts[i + 1].x) / 2;
+        let yc = (pts[i].y + pts[i + 1].y) / 2;
+        ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+      }
+      let last = pts[pts.length - 1];
+      ctx.lineTo(last.x, last.y);
+    };
+
+    // Draw stacked wave landscapes from back (horizon) to front (bottom)
     for (let w = waveCount; w > 0; w--) {
-      let relativeHeight = w / (waveCount + 1); // 1 to 0 (top-down)
-      let waveY = height * relativeHeight;
+      let waveY = baseY + span * ((waveCount - w) / waveCount);
 
-      // Color mapping: Back layers use deeper dark colors, front layers use vibrant shades
-      let factor = 1.0 - (w / waveCount);
-      let waveColor = window.Palettes.interpolateColor(colors, factor);
+      // 0 = back/horizon, 1 = nearest front wave
+      let depthFrac = (waveCount - w) / Math.max(1, waveCount - 1);
+      let waveColor = window.Palettes.interpolateColor(colors, depthFrac);
 
-      ctx.beginPath();
-      ctx.moveTo(0, height); // start bottom-left
-
-      // Render flowing curve across the horizontal width
-      let steps = 40;
-      let stepSize = width / steps;
-      
+      // Sample the rounded ridge
+      let pts = [];
       for (let i = 0; i <= steps; i++) {
         let x = i * stepSize;
-        
-        // Multi-frequency wave synthesis (pseudo 1D noise)
-        let noiseFactor = 0.002;
-        let nAngle = x * noiseFactor;
-        
-        let n1 = Math.sin(nAngle * 1.5 + time * baseSpeed + w * 1.7) * waveAmplitude * 0.6;
-        let n2 = Math.cos(nAngle * 4.2 - time * baseSpeed * 1.3 + w * 2.3) * waveAmplitude * 0.25;
-        let n3 = Math.sin(nAngle * 9.8 + time * baseSpeed * 2.1) * waveAmplitude * 0.08;
-
-        let y = waveY + (n1 + n2 + n3) * settings.morphAmount;
-
-        if (i === 0) ctx.lineTo(x, y);
-        else ctx.lineTo(x, y);
+        pts.push({ x: x, y: waveY + waveHeightAt(x, w) });
       }
 
-      ctx.lineTo(width, height); // end bottom-right
+      // Filled body down to the bottom of the canvas
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+      ctx.lineTo(pts[0].x, pts[0].y);
+      ridgeCurves(pts);
+      ctx.lineTo(width, height);
       ctx.closePath();
 
-      // Stacked gradients matching peaks
       let grad = ctx.createLinearGradient(0, waveY - waveAmplitude, 0, height);
       grad.addColorStop(0, waveColor);
-      let deepShade = window.Palettes.interpolateColor(colors, Math.max(0, factor - 0.2));
+      let deepShade = window.Palettes.interpolateColor(colors, Math.max(0, depthFrac - 0.25));
       grad.addColorStop(1, deepShade);
       ctx.fillStyle = grad;
       ctx.fill();
 
-      // Ridge highlight strokes (vector wire ridges)
+      // Ridge highlight stroke (vector wire ridges / neon glow)
       if (settings.strokeWidth > 0) {
-        ctx.strokeStyle = window.Palettes.interpolateColor(colors, Math.min(1.0, factor + 0.15));
+        ctx.strokeStyle = window.Palettes.interpolateColor(colors, Math.min(1.0, depthFrac + 0.15));
         ctx.lineWidth = settings.strokeWidth;
-        
-        // Setup ridge neon glows
+
         if (settings.fillType === 'neon') {
           ctx.shadowColor = ctx.strokeStyle;
           ctx.shadowBlur = settings.glowAmount || 8;
         }
 
-        // Redraw only the top ridge line
         ctx.beginPath();
-        for (let i = 0; i <= steps; i++) {
-          let x = i * stepSize;
-          let noiseFactor = 0.002;
-          let nAngle = x * noiseFactor;
-          let n1 = Math.sin(nAngle * 1.5 + time * baseSpeed + w * 1.7) * waveAmplitude * 0.6;
-          let n2 = Math.cos(nAngle * 4.2 - time * baseSpeed * 1.3 + w * 2.3) * waveAmplitude * 0.25;
-          let n3 = Math.sin(nAngle * 9.8 + time * baseSpeed * 2.1) * waveAmplitude * 0.08;
-          let y = waveY + (n1 + n2 + n3) * settings.morphAmount;
-
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
+        ctx.moveTo(pts[0].x, pts[0].y);
+        ridgeCurves(pts);
         ctx.stroke();
         ctx.shadowBlur = 0;
       }

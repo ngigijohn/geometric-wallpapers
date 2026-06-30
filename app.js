@@ -17,6 +17,8 @@ const App = {
       strokeWidth: 1,
       cellGap: 0,
       glowAmount: 12,
+      cubeSize: 36,
+      wavePosition: 0.55,
       fillType: "gradient",
       shadingMode: "noise",
       symmetry: 12,
@@ -328,7 +330,9 @@ const App = {
       { id: "slider-morphSpeed", key: "morphSpeed" },
       { id: "slider-morphAmount", key: "morphAmount" },
       { id: "slider-grainAmount", key: "grainAmount" },
-      { id: "slider-glowAmount", key: "glowAmount" }
+      { id: "slider-glowAmount", key: "glowAmount" },
+      { id: "slider-cubeSize", key: "cubeSize" },
+      { id: "slider-wavePosition", key: "wavePosition" }
     ];
 
     rangeSliders.forEach(slider => {
@@ -502,19 +506,30 @@ const App = {
     const symGroup = document.getElementById("group-symmetry");
     const flowerGroup = document.getElementById("group-flowerGrid");
     const grainGroup = document.getElementById("group-grain");
-    
+
     const jitterGroup = document.getElementById("group-randomness");
     const fillGroup = document.getElementById("group-fillType");
     const shadingGroup = document.getElementById("group-shadingMode");
+    const densityGroup = document.getElementById("group-density");
+    const scaleGroup = document.getElementById("group-scale");
+    const cubeSizeGroup = document.getElementById("group-cubeSize");
+    const wavePosGroup = document.getElementById("group-wavePosition");
+    const glowGroup = document.getElementById("group-glowAmount");
 
-    // Default resets
+    // Default visible set (shared low-poly / voronoi style controls)
     gapGroup.style.display = "none";
     symGroup.style.display = "none";
     flowerGroup.style.display = "none";
     grainGroup.style.display = "none";
+    cubeSizeGroup.style.display = "none";
+    wavePosGroup.style.display = "none";
     jitterGroup.style.display = "flex";
     fillGroup.style.display = "flex";
     shadingGroup.style.display = "flex";
+    densityGroup.style.display = "flex";
+    scaleGroup.style.display = "flex";
+    // Glow only matters when neon fill is available AND active
+    if (glowGroup) glowGroup.style.display = this.state.settings.fillType === "neon" ? "flex" : "none";
 
     if (pattern === "voronoi") {
       gapGroup.style.display = "flex";
@@ -524,14 +539,24 @@ const App = {
       jitterGroup.style.display = "none";
       fillGroup.style.display = "none";
       shadingGroup.style.display = "none";
+      densityGroup.style.display = "none";
+      if (glowGroup) glowGroup.style.display = "none";
     } else if (pattern === "bauhaus") {
       grainGroup.style.display = "flex";
       shadingGroup.style.display = "none";
       fillGroup.style.display = "none";
       jitterGroup.style.display = "none";
-    } else if (pattern === "isometric" || pattern === "flowfields") {
+      if (glowGroup) glowGroup.style.display = "none";
+    } else if (pattern === "isometric") {
       jitterGroup.style.display = "none";
       shadingGroup.style.display = "none";
+      densityGroup.style.display = "none";
+      scaleGroup.style.display = "none";
+      cubeSizeGroup.style.display = "flex";
+    } else if (pattern === "flowfields") {
+      jitterGroup.style.display = "none";
+      shadingGroup.style.display = "none";
+      wavePosGroup.style.display = "flex";
     }
   },
 
@@ -547,7 +572,7 @@ const App = {
     this.toggleEngineInputs(this.state.pattern);
 
     // Sync sliders
-    const sliders = ["density", "randomness", "scale", "strokeWidth", "cellGap", "symmetry", "morphSpeed", "morphAmount", "grainAmount", "glowAmount"];
+    const sliders = ["density", "randomness", "scale", "strokeWidth", "cellGap", "symmetry", "morphSpeed", "morphAmount", "grainAmount", "glowAmount", "cubeSize", "wavePosition"];
     sliders.forEach(key => {
       const el = document.getElementById(`slider-${key}`);
       const valDisplay = document.getElementById(`val-${key}`);
@@ -575,9 +600,7 @@ const App = {
       if (el) el.checked = chk.val;
     });
 
-    // Sync glow visibility
-    const glowGroup = document.getElementById("group-glowAmount");
-    if (glowGroup) glowGroup.style.display = settings.fillType === "neon" ? "flex" : "none";
+    // (Glow slider visibility is handled by toggleEngineInputs above)
 
     // Sync aspect cards
     document.querySelectorAll(".ratio-card").forEach(c => {

@@ -838,6 +838,30 @@ input:checked + .slider:before {
   stroke: var(--text-primary);
 }
 
+/* --- MOBILE BOTTOM-SHEET HANDLE --- */
+.sheet-handle {
+  display: none; /* hidden on desktop */
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0 6px;
+  cursor: grab;
+  flex-shrink: 0;
+  touch-action: none;
+}
+
+.sheet-handle-pill {
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  transition: background 0.2s ease;
+}
+
+.sheet-handle:hover .sheet-handle-pill,
+.sheet-handle:active .sheet-handle-pill {
+  background: var(--accent);
+}
+
 /* Responsive sidebars */
 @media(max-width: 900px) {
   .app-container {
@@ -857,6 +881,10 @@ input:checked + .slider:before {
     max-height: 100%;
   }
 
+  .sheet-handle {
+    display: flex;
+  }
+
   .sidebar-dashboard {
     position: relative;
     top: auto;
@@ -865,9 +893,25 @@ input:checked + .slider:before {
     left: auto;
     width: 100%;
     flex: 1 1 auto;
+    min-height: 0;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     border-bottom: none;
-    overflow-y: auto;
+    overflow: hidden;
+    transition: flex-basis 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Minimized: only the handle + a sliver is visible */
+  .sidebar-dashboard.sheet-minimized {
+    flex: 0 0 28px;
+    overflow: hidden;
+  }
+
+  /* When minimized, let the canvas grow to fill freed space */
+  .sidebar-dashboard.sheet-minimized ~ .canvas-viewport,
+  .app-container:has(.sheet-minimized) .canvas-viewport {
+    flex: 1 1 auto;
+    height: auto;
   }
 
   .sidebar-collapse-trigger {

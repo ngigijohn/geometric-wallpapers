@@ -242,6 +242,21 @@ const App = {
       });
     });
 
+    // --- MOBILE SHEET HANDLE TOGGLE ---
+    const sheetHandle = document.getElementById("sheetHandle");
+    if (sheetHandle) {
+      const toggleSheet = () => {
+        const sidebar = document.getElementById("sidebar");
+        sidebar.classList.toggle("sheet-minimized");
+        // After transition, re-fit canvas to new available space
+        setTimeout(() => self.resizeCanvas(), 370);
+      };
+      sheetHandle.addEventListener("click", toggleSheet);
+      sheetHandle.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSheet(); }
+      });
+    }
+
     // --- COLLAPSE SIDEBAR EVENT ---
     const sidebar = document.getElementById("sidebar");
     const collapseBtn = document.getElementById("collapseBtn");

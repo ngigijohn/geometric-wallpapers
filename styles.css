@@ -923,7 +923,13 @@ input:checked + .slider:before {
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     border-bottom: none;
     overflow: hidden;
-    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Disable transitions while the user is actively dragging the handle */
+  .app-container.dragging .canvas-viewport,
+  .app-container.dragging .sidebar-dashboard {
+    transition: none;
   }
 
   /* --- MINIMIZED STATE (class toggled on .app-container by JS) --- */
@@ -932,10 +938,14 @@ input:checked + .slider:before {
     height: calc(100vh - 58px);
   }
 
-  /* Panel shrinks to just show the handle bar */
+  /* Panel shrinks to just show the handle bar.
+     JS also drives height via inline styles (applyHeights); these are CSS fallbacks. */
   .app-container.panel-collapsed .sidebar-dashboard {
-    flex: 0 0 auto;
+    flex: 0 0 58px;
+    height: 58px;
+    min-height: 58px;
     max-height: 58px;
+    overflow: hidden;
   }
 
   /* Flip the chevron + swap label when collapsed */

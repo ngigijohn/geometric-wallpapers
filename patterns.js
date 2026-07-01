@@ -748,7 +748,112 @@ const Patterns = {
     ctx.restore();
   },
 
-  // 6. --- FLOW FIELD WAVES PATTERN GENERATOR ---
+  // 6. --- FLOATING MORPHING BLOBS PATTERN GENERATOR ---
+  drawBlobs(ctx, width, height, colors, settings, time = 0) {
+    // Rich gradient background
+    let bgGrad = ctx.createRadialGradient(width * 0.4, height * 0.35, 0, width * 0.5, height * 0.5, Math.max(width, height) * 0.8);
+    bgGrad.addColorStop(0, colors[Math.min(1, colors.length - 1)]);
+    bgGrad.addColorStop(1, colors[0]);
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    let blobCount = Math.max(4, Math.min(18, Math.round(settings.density * 0.14)));
+    let t = time * settings.morphSpeed * 0.00025;
+
+    // Seeded deterministic random so blobs don't re-scatter on every redraw
+    let s = 9301;
+    const rand = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+
+    // Build blob definitions once per seed
+    const blobs = [];
+    for (let i = 0; i < blobCount; i++) {
+      blobs.push({
+        bx:         0.05 + rand() * 0.9,
+        by:         0.05 + rand() * 0.9,
+        size:       (width * 0.05 + rand() * width * 0.13) * settings.scale,
+        colorFactor: rand(),
+        driftPX:    rand() * Math.PI * 2,
+        driftPY:    rand() * Math.PI * 2,
+        morphP:     rand() * Math.PI * 2,
+        arms:       3 + Math.floor(rand() * 4),
+        rotP:       rand() * Math.PI * 2,
+        rotSpd:     (rand() - 0.5) * 0.35,
+      });
+    }
+
+    // Draw largest blobs first (painter's algorithm)
+    blobs.sort((a, b) => b.size - a.size);
+
+    const N = 26; // path points per blob — more = smoother
+    for (const blob of blobs) {
+      let cx = blob.bx * width  + Math.sin(t * 0.65 + blob.driftPX) * blob.size * settings.morphAmount * 0.7;
+      let cy = blob.by * height + Math.cos(t * 0.48 + blob.driftPY) * blob.size * settings.morphAmount * 0.55;
+
+      // Build the distorted-circle path
+      const pts = [];
+      for (let j = 0; j < N; j++) {
+        let angle = (j / N) * Math.PI * 2;
+        let distort =
+          Math.sin(angle * blob.arms        + t * 1.9 + blob.morphP)       * 0.28 +
+          Math.cos(angle * (blob.arms + 1)  - t * 1.3 + blob.morphP * 1.7) * 0.12 +
+          Math.sin(angle * 2                + t * 0.7 + blob.morphP * 0.5) * 0.06;
+        let r = blob.size * (1 + distort * settings.morphAmount);
+        let a = angle + t * blob.rotSpd + blob.rotP;
+        pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+      }
+
+      // Smooth closed curve via quadratic midpoints
+      ctx.beginPath();
+      const mid0x = (pts[N - 1].x + pts[0].x) / 2;
+      const mid0y = (pts[N - 1].y + pts[0].y) / 2;
+      ctx.moveTo(mid0x, mid0y);
+      for (let j = 0; j < N; j++) {
+        const next = pts[(j + 1) % N];
+        const mcx = (pts[j].x + next.x) / 2;
+        const mcy = (pts[j].y + next.y) / 2;
+        ctx.quadraticCurveTo(pts[j].x, pts[j].y, mcx, mcy);
+      }
+      ctx.closePath();
+
+      let color = window.Palettes.interpolateColor(colors, blob.colorFactor);
+
+      if (settings.fillType === 'gradient') {
+        let inner = window.Palettes.interpolateColor(colors, Math.min(1, blob.colorFactor + 0.28));
+        let grad = ctx.createRadialGradient(
+          cx - blob.size * 0.2, cy - blob.size * 0.2, 0,
+          cx, cy, blob.size * 1.3
+        );
+        grad.addColorStop(0, inner);
+        grad.addColorStop(1, color + '44');
+        ctx.fillStyle = grad;
+      } else if (settings.fillType === 'neon') {
+        ctx.fillStyle = 'rgba(0,0,0,0.06)';
+        ctx.shadowColor = color;
+        ctx.shadowBlur = settings.glowAmount || 20;
+      } else {
+        ctx.fillStyle = color + 'bb';
+      }
+
+      ctx.globalAlpha = 0.78;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      if (settings.strokeWidth > 0) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = settings.strokeWidth;
+        if (settings.fillType === 'neon') {
+          ctx.shadowColor = color;
+          ctx.shadowBlur = settings.glowAmount || 20;
+        }
+        ctx.globalAlpha = settings.fillType === 'neon' ? 1 : 0.85;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      ctx.shadowBlur = 0;
+    }
+  },
+
+  // 7. --- FLOW FIELD WAVES PATTERN GENERATOR ---
   drawFlowWaves(ctx, width, height, colors, settings, time = 0) {
     // Backdrop fill (reads as open "sky" above the horizon)
     ctx.fillStyle = colors[0];

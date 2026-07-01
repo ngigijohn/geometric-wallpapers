@@ -122,6 +122,7 @@ const App = {
     this.time = 0;
     this.lastTime = 0;
     this.isMorphing = true;
+    this.paused = false;
     
     // Interaction physics
     this.draggedPoint = null;
@@ -173,13 +174,17 @@ const App = {
 
   // Continuous animation request ticks
   animate(timestamp) {
-    if (!this.lastTime) this.lastTime = timestamp;
-    const dt = timestamp - this.lastTime;
-    this.lastTime = timestamp;
+    if (this.paused) {
+      this.lastTime = 0;
+    } else {
+      if (!this.lastTime) this.lastTime = timestamp;
+      const dt = timestamp - this.lastTime;
+      this.lastTime = timestamp;
 
-    if (this.state.settings.morphEnabled) {
-      this.time += dt;
-      this.draw();
+      if (this.state.settings.morphEnabled) {
+        this.time += dt;
+        this.draw();
+      }
     }
 
     requestAnimationFrame((t) => this.animate(t));
@@ -214,14 +219,17 @@ const App = {
       case "flowfields":
         window.Patterns.drawFlowWaves(ctx, w, h, colors, settings, this.time);
         break;
+      case "blobs":
+        window.Patterns.drawBlobs(ctx, w, h, colors, settings, this.time);
+        break;
     }
 
     ctx.restore();
   },
 
   triggerRender() {
-    // Force a single redraw immediately if animation morph is disabled
-    if (!this.state.settings.morphEnabled) {
+    // Force a single redraw when morph is off or animation is paused
+    if (!this.state.settings.morphEnabled || this.paused) {
       this.draw();
     }
   },
@@ -244,20 +252,121 @@ const App = {
       });
     });
 
-    // --- MOBILE SHEET HANDLE TOGGLE ---
+    // --- MOBILE SHEET HANDLE: tap = toggle, drag = free resize + snap at release ---
     const sheetHandle = document.getElementById("sheetHandle");
     if (sheetHandle) {
       const sheetText = document.getElementById("sheetHandleText");
-      const toggleSheet = () => {
-        const container = document.querySelector(".app-container");
-        const collapsed = container.classList.toggle("panel-collapsed");
-        if (sheetText) sheetText.textContent = collapsed ? "Show Panel" : "Hide Panel";
-        // After the CSS transition, re-fit the canvas to the new space
-        setTimeout(() => self.resizeCanvas(), 380);
+      const container = document.querySelector(".app-container");
+      const sidebarEl = document.getElementById("sidebar");
+      const viewportEl = document.getElementById("viewport");
+
+      const HANDLE_H = 58;        // height of the handle strip when collapsed
+      const MIN_PANEL_H = 100;    // below this, drag-release snaps to collapsed
+      const DRAG_THRESHOLD = 8;   // px of movement before drag mode activates
+
+      let dragActive = false;
+      let pointerStartY = 0;
+      let startSidebarH = 0;
+      let currentDragH = 0;
+      let lastExpandedH = 0;      // remembers last non-collapsed height for tap-to-expand
+
+      const isCollapsed = () => container.classList.contains("panel-collapsed");
+
+      // Set both sidebar and viewport to explicit pixel heights via inline styles.
+      // This is the single source of truth on mobile — CSS classes only control visual state.
+      const applyHeights = (sidebarH) => {
+        const totalH = window.innerHeight;
+        const h = Math.max(HANDLE_H, Math.min(Math.round(totalH * 0.90), Math.round(sidebarH)));
+        sidebarEl.style.height = h + "px";
+        sidebarEl.style.flex = "none";
+        viewportEl.style.height = (totalH - h) + "px";
+        viewportEl.style.flex = "none";
+        currentDragH = h;
+        return h;
       };
-      sheetHandle.addEventListener("click", toggleSheet);
+
+      const collapse = () => {
+        applyHeights(HANDLE_H);
+        container.classList.add("panel-collapsed");
+        if (sheetText) sheetText.textContent = "Show Panel";
+        setTimeout(() => self.resizeCanvas(), 50);
+      };
+
+      const expand = (targetH) => {
+        const totalH = window.innerHeight;
+        const h = applyHeights(targetH || Math.round(totalH * 0.52));
+        lastExpandedH = h;
+        container.classList.remove("panel-collapsed");
+        if (sheetText) sheetText.textContent = "Hide Panel";
+        setTimeout(() => self.resizeCanvas(), 50);
+      };
+
+      // Read current sidebar height (inline style → fallback to measured)
+      const getSidebarH = () => {
+        if (sidebarEl.style.height) return parseInt(sidebarEl.style.height, 10);
+        return sidebarEl.getBoundingClientRect().height;
+      };
+
+      sheetHandle.addEventListener("pointerdown", (e) => {
+        dragActive = false;
+        pointerStartY = e.clientY;
+        startSidebarH = getSidebarH();
+        currentDragH = startSidebarH;
+        sheetHandle.setPointerCapture(e.pointerId);
+      });
+
+      sheetHandle.addEventListener("pointermove", (e) => {
+        const dy = pointerStartY - e.clientY; // up = positive = bigger sidebar
+        if (!dragActive && Math.abs(dy) > DRAG_THRESHOLD) {
+          dragActive = true;
+          container.classList.add("dragging");
+          // Begin drag from handle height if currently collapsed
+          if (isCollapsed()) {
+            startSidebarH = HANDLE_H;
+            container.classList.remove("panel-collapsed");
+          }
+        }
+        if (dragActive) {
+          applyHeights(startSidebarH + dy);
+        }
+      });
+
+      sheetHandle.addEventListener("pointerup", () => {
+        container.classList.remove("dragging");
+        if (dragActive) {
+          dragActive = false;
+          // Snap to collapsed if released very low; otherwise lock in at released position
+          if (currentDragH < MIN_PANEL_H) {
+            collapse();
+          } else {
+            lastExpandedH = currentDragH;
+            container.classList.remove("panel-collapsed");
+            if (sheetText) sheetText.textContent = "Hide Panel";
+            setTimeout(() => self.resizeCanvas(), 50);
+          }
+        } else {
+          // Pure tap: toggle between collapsed and last-known expanded height
+          if (isCollapsed()) {
+            expand(lastExpandedH);
+          } else {
+            const h = getSidebarH();
+            if (h > HANDLE_H + 20) lastExpandedH = h;
+            collapse();
+          }
+        }
+      });
+
+      sheetHandle.addEventListener("pointercancel", () => {
+        dragActive = false;
+        container.classList.remove("dragging");
+      });
+
       sheetHandle.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSheet(); }
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          if (isCollapsed()) expand(lastExpandedH);
+          else { const h = getSidebarH(); if (h > HANDLE_H + 20) lastExpandedH = h; collapse(); }
+        }
       });
     }
 
@@ -293,7 +402,8 @@ const App = {
       sacred: { title: "Sacred Geometry & Mandalas", desc: "Implements high-symmetry rotating concentric rings, rotated stars, and complex lines. Optional hexagonally spaced circles underlay (Flower of Life style) make this highly relaxing." },
       bauhaus: { title: "Bauhaus & Memphis Modernism", desc: "Builds a clean vector compositional canvas utilizing overlapping large circles, arches, grids, curvis, squiggles, and lines with custom vintage paper grain filtering overlays." },
       isometric: { title: "Isometric 3D Cascading Cubes", desc: "Constructs cascading isometric cubes with high-fidelity directional light shading. morph animations run sine-based rolling 3D landscape terrain waves." },
-      flowfields: { title: "Generative Flow Field Waves", desc: "Generates stacked fluid-like wavy landscape bands. Ridge wireframes can glow in adjustable neon colors while waves roll like a digital ocean." }
+      flowfields: { title: "Generative Flow Field Waves", desc: "Generates stacked fluid-like wavy landscape bands. Ridge wireframes can glow in adjustable neon colors while waves roll like a digital ocean." },
+      blobs: { title: "Floating Morphing Blobs", desc: "Organic blob shapes drift and slowly morph across the canvas. Each blob warps between lobe configurations independently, creating a mesmerizing lava-lamp flow effect." }
     };
 
     cards.forEach(card => {
@@ -428,6 +538,24 @@ const App = {
     }
 
     // --- QUICK ACTION WORKSPACE CONTROL BUTTONS ---
+    const pauseBtn = document.getElementById("pauseBtn");
+    const pauseIconEl = document.getElementById("pauseIcon");
+    if (pauseBtn) {
+      pauseBtn.addEventListener("click", () => {
+        self.paused = !self.paused;
+        if (self.paused) {
+          pauseIconEl.innerHTML = `<polygon points="5 3 19 12 5 21 5 3"></polygon>`;
+          pauseBtn.title = "Resume Animation";
+          pauseBtn.setAttribute("aria-label", "Resume Animation");
+        } else {
+          pauseIconEl.innerHTML = `<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>`;
+          pauseBtn.title = "Pause Animation";
+          pauseBtn.setAttribute("aria-label", "Pause Animation");
+          self.triggerRender();
+        }
+      });
+    }
+
     document.getElementById("undoBtn").addEventListener("click", () => self.history.undo(self.state));
     document.getElementById("redoBtn").addEventListener("click", () => self.history.redo(self.state));
     
@@ -557,6 +685,9 @@ const App = {
       jitterGroup.style.display = "none";
       shadingGroup.style.display = "none";
       wavePosGroup.style.display = "flex";
+    } else if (pattern === "blobs") {
+      jitterGroup.style.display = "none";
+      shadingGroup.style.display = "none";
     }
   },
 

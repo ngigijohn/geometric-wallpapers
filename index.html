@@ -18,7 +18,7 @@
     
     <!-- --- INTERACTIVE ARTWORK CANVAS --- -->
     <div class="canvas-viewport" id="viewport">
-      <canvas id="mainCanvas"></canvas>
+      <canvas id="mainCanvas" role="img" aria-label="Generative geometric wallpaper artwork. Click or drag on the canvas to sculpt vertices."></canvas>
     </div>
 
     <!-- --- WORKSPACE UTILITIES (BOTTOM-LEFT FLOATING) --- -->
@@ -58,6 +58,38 @@
           <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
         </svg>
       </button>
+      <button class="control-circle" id="shortcutsBtn" title="Keyboard Shortcuts" aria-label="Show Keyboard Shortcuts" aria-haspopup="dialog">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- --- KEYBOARD SHORTCUTS LEGEND (hidden by default) --- -->
+    <div class="shortcuts-modal-backdrop hidden" id="shortcutsModalBackdrop">
+      <div class="shortcuts-modal" role="dialog" aria-modal="true" aria-labelledby="shortcutsModalTitle">
+        <div class="shortcuts-modal-header">
+          <h2 id="shortcutsModalTitle">Keyboard Shortcuts</h2>
+          <button class="control-circle" id="shortcutsCloseBtn" title="Close" aria-label="Close Keyboard Shortcuts">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <ul class="shortcuts-list">
+          <li><kbd>Ctrl/Cmd</kbd> + <kbd>Z</kbd><span>Undo</span></li>
+          <li><kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd><span>Redo</span></li>
+          <li><kbd>S</kbd><span>Shuffle settings & palette</span></li>
+          <li><kbd>P</kbd><span>Export PNG</span></li>
+          <li><kbd>F</kbd><span>Toggle fullscreen</span></li>
+          <li><kbd>Space</kbd><span>Pause / resume morph animation</span></li>
+          <li><kbd>1</kbd>–<kbd>7</kbd><span>Select pattern engine</span></li>
+          <li><kbd>?</kbd><span>Toggle this legend</span></li>
+        </ul>
+      </div>
     </div>
 
     <!-- --- FLOATING SIDEBAR DASHBOARD --- -->
@@ -377,6 +409,17 @@
             </div>
           </div>
 
+          <!-- Edit-in-place color customizer for whichever palette is currently active -->
+          <div class="control-group">
+            <label>Customize Active Colors</label>
+            <p style="font-size:11px; color:var(--text-secondary); margin-bottom:4px;">
+              Fine-tune individual swatches from the active scheme. Editing a color marks the palette as custom.
+            </p>
+            <div class="custom-swatch-editor" id="customSwatchEditor">
+              <!-- JS injects one color input per active swatch here -->
+            </div>
+          </div>
+
         </div>
 
         <!-- --- PANEL 4: EXPORT TOOLS --- -->
@@ -432,6 +475,14 @@
                   <polygon points="5 3 19 12 5 21 5 3"></polygon>
                 </svg>
                 Export Scalable Vector (SVG)
+              </button>
+
+              <button class="btn btn-secondary" id="copyShareLinkBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                </svg>
+                Copy Share Link
               </button>
             </div>
           </div>

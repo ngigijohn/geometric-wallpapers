@@ -140,16 +140,20 @@ const Palettes = {
     return this.rgbToHex(r * 255, g * 255, b * 255);
   },
 
-  // Interpolate between a list of colors (0.0 to 1.0) using HSL for high visual aesthetics
-  interpolateColor(colors, factor) {
-    if (colors.length === 0) return "#000000";
-    if (colors.length === 1) return colors[0];
-    if (factor <= 0) return colors[0];
-    if (factor >= 1) return colors[colors.length - 1];
+  // Interpolate between a list of colors (0.0 to 1.0) using HSL for high visual aesthetics.
+  // Returns the raw {h, s, l} triple — callers that need further HSL-space adjustments
+  // (e.g. per-face lightness shading) should use this instead of interpolateColor() to
+  // avoid a redundant hex -> HSL round-trip.
+  interpolateColorHSL(colors, factor) {
+    if (colors.length === 0) return { h: 0, s: 0, l: 0 };
+    if (colors.length === 1) return this.hexToHsl(colors[0]);
+    const clamped = Math.max(0, Math.min(1, factor));
+    if (clamped === 0) return this.hexToHsl(colors[0]);
+    if (clamped === 1) return this.hexToHsl(colors[colors.length - 1]);
 
     const count = colors.length - 1;
-    const segment = Math.min(count - 1, Math.floor(factor * count));
-    const segmentFactor = (factor * count) - segment;
+    const segment = Math.min(count - 1, Math.floor(clamped * count));
+    const segmentFactor = (clamped * count) - segment;
 
     const c1 = this.hexToHsl(colors[segment]);
     const c2 = this.hexToHsl(colors[segment + 1]);
@@ -171,6 +175,17 @@ const Palettes = {
     const s = c1.s + segmentFactor * (c2.s - c1.s);
     const l = c1.l + segmentFactor * (c2.l - c1.l);
 
+    return { h: h < 0 ? h + 360 : h, s, l };
+  },
+
+  // Interpolate between a list of colors (0.0 to 1.0) using HSL for high visual aesthetics
+  interpolateColor(colors, factor) {
+    if (colors.length === 0) return "#000000";
+    if (colors.length === 1) return colors[0];
+    if (factor <= 0) return colors[0];
+    if (factor >= 1) return colors[colors.length - 1];
+
+    const { h, s, l } = this.interpolateColorHSL(colors, factor);
     return this.hslToHex(h, s, l);
   },
 

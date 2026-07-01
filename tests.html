@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Geometric Wallpaper Studio — Test Suite</title>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0d0d11;
+      color: #f3f3f5;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    p.subtitle { color: #a1a1aa; font-size: 13px; margin-bottom: 24px; }
+    h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; color: #a1a1aa; margin: 24px 0 8px; }
+    .summary {
+      font-size: 15px;
+      font-weight: 600;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .summary.all-pass { background: rgba(66, 209, 122, 0.15); color: #42d17a; }
+    .summary.has-fail { background: rgba(247, 37, 133, 0.15); color: #f72585; }
+    .test-result {
+      font-size: 13px;
+      padding: 6px 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .test-result .icon { display: inline-block; width: 18px; }
+    .test-result.pass .icon { color: #42d17a; }
+    .test-result.fail .icon { color: #f72585; }
+    .test-result .error {
+      margin: 4px 0 4px 22px;
+      color: #f72585;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+    #results { border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Geometric Wallpaper Studio — Test Suite</h1>
+  <p class="subtitle">Zero-dependency, browser-run tests. No Node/npm required — just open this file. See console for the same summary.</p>
+  <div id="results">Running tests...</div>
+
+  <!-- App scripts under test -->
+  <script src="palettes.js"></script>
+  <script src="patterns.js"></script>
+
+  <!-- Test framework + cases -->
+  <script src="test-runner.js"></script>
+  <script src="tests.js"></script>
+</body>
+</html>

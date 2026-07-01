@@ -603,30 +603,42 @@ const Patterns = {
     if (settings.showGrain) {
       ctx.save();
       ctx.globalCompositeOperation = 'overlay';
-      ctx.fillStyle = '#ffffff';
-      let bufferCanvas = ctx.canvas;
-      let w = width, h = height;
-      
-      // Fast procedural grain injection
-      let grainImg = ctx.createImageData(w, h);
-      let data = grainImg.data;
-      let opacity = 0.05 * settings.grainAmount;
-      for (let i = 0; i < data.length; i += 4) {
-        let val = (Math.random() - 0.5) * 255 * opacity;
-        data[i] = 128 + val;
-        data[i+1] = 128 + val;
-        data[i+2] = 128 + val;
-        data[i+3] = 255;
-      }
-      
-      // Temporary draw image
-      let tempCanvas = document.createElement('canvas');
-      tempCanvas.width = w;
-      tempCanvas.height = h;
-      tempCanvas.getContext('2d').putImageData(grainImg, 0, 0);
-      ctx.drawImage(tempCanvas, 0, 0);
+      let pattern = this.getGrainPattern(ctx, settings.grainAmount);
+      ctx.fillStyle = pattern;
+      ctx.fillRect(0, 0, width, height);
       ctx.restore();
     }
+  },
+
+  // Small repeating noise tile, regenerated only when grainAmount changes (instead of
+  // allocating a full width*height ImageData + fresh <canvas> every animation frame).
+  _grainCache: { amount: null, tile: null },
+  getGrainTile(grainAmount) {
+    if (this._grainCache.tile && this._grainCache.amount === grainAmount) {
+      return this._grainCache.tile;
+    }
+    const size = 128;
+    const tile = document.createElement('canvas');
+    tile.width = size;
+    tile.height = size;
+    const tileCtx = tile.getContext('2d');
+    const grainImg = tileCtx.createImageData(size, size);
+    const data = grainImg.data;
+    const opacity = 0.05 * grainAmount;
+    for (let i = 0; i < data.length; i += 4) {
+      const val = (Math.random() - 0.5) * 255 * opacity;
+      data[i] = 128 + val;
+      data[i + 1] = 128 + val;
+      data[i + 2] = 128 + val;
+      data[i + 3] = 255;
+    }
+    tileCtx.putImageData(grainImg, 0, 0);
+    this._grainCache = { amount: grainAmount, tile };
+    return tile;
+  },
+  getGrainPattern(ctx, grainAmount) {
+    const tile = this.getGrainTile(grainAmount);
+    return ctx.createPattern(tile, 'repeat');
   },
 
   // 5. --- ISOMETRIC 3D CUBES PATTERN GENERATOR ---
@@ -683,10 +695,9 @@ const Patterns = {
 
         let yOffset = cy + waveOffset;
 
-        // Determine face base colors
+        // Determine face base colors (HSL directly — skips a redundant hex round-trip)
         let factor = (cx / width) * 0.5 + (yOffset / height) * 0.5;
-        let cubeColor = window.Palettes.interpolateColor(colors, Math.max(0, Math.min(1, factor)));
-        let hsl = window.Palettes.hexToHsl(cubeColor);
+        let hsl = window.Palettes.interpolateColorHSL(colors, factor);
 
         // Peaks catch more light, valleys fall into shadow (height-based shading)
         let lift = (waveOffset / (waveAmp + 1)) * 9;

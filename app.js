@@ -130,8 +130,20 @@ const App = {
 
     // Load initial states
     this.setupUIBindings();
+    this.bindKeyboardShortcuts();
     this.loadPresetPalettes();
     this.loadFavorites();
+
+    // If the page was opened via a "Copy Share Link" URL, apply the encoded design
+    // before the first render/history snapshot so it becomes the new baseline.
+    if (this.applySharedStateFromURL()) {
+      this.ctx.geometricPoints = null;
+      this.syncSettingsToUI();
+      this.syncPaletteHighlight();
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, "", location.pathname + location.hash);
+      }
+    }
 
     // Set aspect and size workspace
     this.resizeCanvas();
@@ -172,6 +184,11 @@ const App = {
     this.triggerRender();
   },
 
+  // Target redraw interval for morph animation (ms). Capping below native display
+  // refresh rate avoids redoing expensive per-frame work (Delaunay triangulation,
+  // full-canvas grain, etc.) more often than is visually necessary.
+  frameInterval: 1000 / 45,
+
   // Continuous animation request ticks
   animate(timestamp) {
     if (this.paused) {
@@ -179,9 +196,9 @@ const App = {
     } else {
       if (!this.lastTime) this.lastTime = timestamp;
       const dt = timestamp - this.lastTime;
-      this.lastTime = timestamp;
 
-      if (this.state.settings.morphEnabled) {
+      if (this.state.settings.morphEnabled && dt >= this.frameInterval) {
+        this.lastTime = timestamp;
         this.time += dt;
         this.draw();
       }
@@ -331,7 +348,11 @@ const App = {
         }
       });
 
-      sheetHandle.addEventListener("pointerup", () => {
+      // Shared release logic for both a normal release (pointerup) and an OS-initiated
+      // cancel (pointercancel) — e.g. a mobile browser deciding mid-touch that the
+      // gesture is a page scroll. Without this, a cancel used to just freeze the panel
+      // wherever the drag left it, with no snap and no tap-to-toggle fallback.
+      const finishRelease = () => {
         container.classList.remove("dragging");
         if (dragActive) {
           dragActive = false;
@@ -354,12 +375,10 @@ const App = {
             collapse();
           }
         }
-      });
+      };
 
-      sheetHandle.addEventListener("pointercancel", () => {
-        dragActive = false;
-        container.classList.remove("dragging");
-      });
+      sheetHandle.addEventListener("pointerup", finishRelease);
+      sheetHandle.addEventListener("pointercancel", finishRelease);
 
       sheetHandle.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -407,9 +426,10 @@ const App = {
     };
 
     cards.forEach(card => {
-      card.addEventListener("click", () => {
-        cards.forEach(c => c.classList.remove("active"));
+      const activate = () => {
+        cards.forEach(c => { c.classList.remove("active"); c.setAttribute("aria-pressed", "false"); });
         card.classList.add("active");
+        card.setAttribute("aria-pressed", "true");
 
         const patternKey = card.getAttribute("data-pattern");
         self.state.pattern = patternKey;
@@ -420,13 +440,16 @@ const App = {
 
         // Toggle engine specific sliders in UI
         self.toggleEngineInputs(patternKey);
-        
+
         // Reset points cache
         self.ctx.geometricPoints = null;
 
         self.history.saveState(self.state);
         self.triggerRender();
-      });
+      };
+      card.setAttribute("aria-pressed", card.classList.contains("active") ? "true" : "false");
+      card.addEventListener("click", activate);
+      self.makeKeyboardActivatable(card, activate);
     });
 
     // --- INPUT RANGE/SLIDER BINDINGS ---
@@ -507,14 +530,18 @@ const App = {
     // --- ASPECT RATIO SELECTIONS ---
     const ratioCards = document.querySelectorAll(".ratio-card");
     ratioCards.forEach(card => {
-      card.addEventListener("click", () => {
-        ratioCards.forEach(c => c.classList.remove("active"));
+      const activate = () => {
+        ratioCards.forEach(c => { c.classList.remove("active"); c.setAttribute("aria-pressed", "false"); });
         card.classList.add("active");
+        card.setAttribute("aria-pressed", "true");
 
         self.state.settings.aspect = card.getAttribute("data-ratio");
         self.history.saveState(self.state);
         self.resizeCanvas();
-      });
+      };
+      card.setAttribute("aria-pressed", card.classList.contains("active") ? "true" : "false");
+      card.addEventListener("click", activate);
+      self.makeKeyboardActivatable(card, activate);
     });
 
     // --- COLOR HARMONIZER ACTIONS ---
@@ -532,6 +559,7 @@ const App = {
         // De-select pre-coded active borders
         document.querySelectorAll(".palette-item").forEach(item => item.classList.remove("active"));
 
+        self.renderCustomSwatchEditor();
         self.history.saveState(self.state);
         self.triggerRender();
       });
@@ -586,10 +614,27 @@ const App = {
       });
 
       self.ctx.geometricPoints = null; // Re-seed
-      self.syncSettingsToUI();
+      self.syncSettingsToUI(); // also refreshes the custom swatch editor
       self.history.saveState(self.state);
       self.triggerRender();
     });
+
+    // --- KEYBOARD SHORTCUTS LEGEND MODAL ---
+    const shortcutsBtn = document.getElementById("shortcutsBtn");
+    const shortcutsBackdrop = document.getElementById("shortcutsModalBackdrop");
+    const shortcutsCloseBtn = document.getElementById("shortcutsCloseBtn");
+    if (shortcutsBtn && shortcutsBackdrop) {
+      const openShortcuts = () => shortcutsBackdrop.classList.remove("hidden");
+      const closeShortcuts = () => shortcutsBackdrop.classList.add("hidden");
+      self.toggleShortcutsModal = () => {
+        shortcutsBackdrop.classList.toggle("hidden");
+      };
+      shortcutsBtn.addEventListener("click", openShortcuts);
+      shortcutsCloseBtn.addEventListener("click", closeShortcuts);
+      shortcutsBackdrop.addEventListener("click", (e) => {
+        if (e.target === shortcutsBackdrop) closeShortcuts();
+      });
+    }
 
     document.getElementById("fullScreenBtn").addEventListener("click", () => {
       if (!document.fullscreenElement) {
@@ -605,6 +650,7 @@ const App = {
     document.getElementById("downloadPngBtn").addEventListener("click", () => self.exportPNG());
     document.getElementById("downloadSvgBtn").addEventListener("click", () => self.exportSVG());
     document.getElementById("saveGalleryBtn").addEventListener("click", () => self.saveToGallery());
+    document.getElementById("copyShareLinkBtn").addEventListener("click", () => self.copyShareLink());
 
     // --- INTERACTIVE DRAGGING / NODE SCULPTING MOUSE UTILS ---
     this.canvas.addEventListener("mousedown", (e) => self.handleMouseDown(e));
@@ -612,20 +658,27 @@ const App = {
     this.canvas.addEventListener("mouseup", () => self.handleMouseUp());
     this.canvas.addEventListener("mouseleave", () => self.handleMouseUp());
 
-    // Touch support for mobile interaction
+    // Touch support for mobile interaction. preventDefault stops the page from
+    // scrolling/pinch-zooming while the user is sculpting vertices on the canvas
+    // (listeners are non-passive by default here, so this is safe to call).
     this.canvas.addEventListener("touchstart", (e) => {
       if (e.touches.length > 0) {
+        e.preventDefault();
         const touch = e.touches[0];
         self.handleMouseDown(touch);
       }
-    });
+    }, { passive: false });
     this.canvas.addEventListener("touchmove", (e) => {
       if (e.touches.length > 0) {
+        e.preventDefault();
         const touch = e.touches[0];
         self.handleMouseMove(touch);
       }
-    });
-    this.canvas.addEventListener("touchend", () => self.handleMouseUp());
+    }, { passive: false });
+    this.canvas.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      self.handleMouseUp();
+    }, { passive: false });
   },
 
   // Toggle visible controls in panel depending on selected geometric engine
@@ -738,6 +791,219 @@ const App = {
       if (c.getAttribute("data-ratio") === settings.aspect) c.classList.add("active");
       else c.classList.remove("active");
     });
+
+    this.renderCustomSwatchEditor();
+  },
+
+  // Highlights whichever palette card matches state.activePaletteKey (no-op / clears
+  // highlight entirely when the active colors were custom-edited or harmony-generated).
+  syncPaletteHighlight() {
+    document.querySelectorAll(".palette-item").forEach(item => {
+      if (item.getAttribute("data-palette") === this.state.activePaletteKey) item.classList.add("active");
+      else item.classList.remove("active");
+    });
+  },
+
+  // --- CUSTOM PALETTE EDITOR (edit-in-place) ---
+  // Renders one <input type="color"> per active swatch so the user can fine-tune the
+  // currently-selected palette directly, without a separate "save as new palette" flow.
+  renderCustomSwatchEditor() {
+    const container = document.getElementById("customSwatchEditor");
+    if (!container) return;
+    container.innerHTML = "";
+
+    const self = this;
+    this.state.colors.forEach((hex, idx) => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "picker-wrapper";
+      wrapper.title = `Swatch ${idx + 1}`;
+
+      const input = document.createElement("input");
+      input.type = "color";
+      input.value = hex;
+      input.setAttribute("aria-label", `Edit swatch ${idx + 1} color`);
+      input.addEventListener("input", () => {
+        self.state.colors[idx] = input.value;
+        self.state.activePaletteKey = "custom";
+        self.syncPaletteHighlight();
+        self.triggerRender();
+        self.debouncedSaveHistory();
+      });
+
+      wrapper.appendChild(input);
+      container.appendChild(wrapper);
+    });
+  },
+
+  // Native color inputs fire "input" continuously while dragging the picker; debounce
+  // the undo/redo snapshot so a single drag doesn't spam the 30-step history stack.
+  debouncedSaveHistory() {
+    clearTimeout(this._saveHistoryTimer);
+    this._saveHistoryTimer = setTimeout(() => this.history.saveState(this.state), 400);
+  },
+
+  // --- SHAREABLE LINKS (human-readable query params) ---
+  // Settings serialized uniformly regardless of the active pattern, so a link always
+  // reproduces exactly what was on screen even if the viewer switches patterns after.
+  SHARE_NUMERIC_KEYS: ["density", "randomness", "scale", "strokeWidth", "cellGap", "glowAmount", "cubeSize", "wavePosition", "symmetry", "grainAmount", "morphSpeed", "morphAmount"],
+  SHARE_STRING_KEYS: ["fillType", "shadingMode"],
+  SHARE_BOOL_KEYS: ["showFlowerOfLife", "showGrain", "morphEnabled"],
+
+  buildShareParams() {
+    const s = this.state;
+    const params = new URLSearchParams();
+    params.set("pattern", s.pattern);
+    params.set("palette", s.activePaletteKey);
+    params.set("aspect", s.settings.aspect);
+
+    // Only ship explicit colors when they don't match a built-in preset (custom edits
+    // or a generated harmony) so the link reproduces exactly what's on screen.
+    if (!window.Palettes.presets[s.activePaletteKey]) {
+      params.set("colors", s.colors.join(","));
+    }
+
+    this.SHARE_NUMERIC_KEYS.forEach(k => params.set(k, s.settings[k]));
+    this.SHARE_STRING_KEYS.forEach(k => params.set(k, s.settings[k]));
+    this.SHARE_BOOL_KEYS.forEach(k => params.set(k, s.settings[k] ? "1" : "0"));
+
+    return params;
+  },
+
+  getShareURL() {
+    return `${location.origin}${location.pathname}?${this.buildShareParams().toString()}`;
+  },
+
+  // Reads location.search and merges any recognized params into state. Returns true
+  // if any shared design params were found and applied.
+  applySharedStateFromURL() {
+    const params = new URLSearchParams(location.search);
+    if ([...params.keys()].length === 0) return false;
+
+    const pattern = params.get("pattern");
+    if (pattern) this.state.pattern = pattern;
+
+    const paletteKey = params.get("palette");
+    const colorsParam = params.get("colors");
+    if (colorsParam) {
+      const colors = colorsParam.split(",").map(c => c.trim()).filter(Boolean);
+      if (colors.length > 0) {
+        this.state.colors = colors;
+        this.state.activePaletteKey = paletteKey || "custom";
+      }
+    } else if (paletteKey && window.Palettes.presets[paletteKey]) {
+      this.state.colors = [...window.Palettes.presets[paletteKey].colors];
+      this.state.activePaletteKey = paletteKey;
+    }
+
+    this.SHARE_NUMERIC_KEYS.forEach(k => {
+      if (!params.has(k)) return;
+      const v = parseFloat(params.get(k));
+      if (!Number.isNaN(v)) this.state.settings[k] = v;
+    });
+
+    this.SHARE_STRING_KEYS.forEach(k => {
+      if (params.has(k)) this.state.settings[k] = params.get(k);
+    });
+
+    this.SHARE_BOOL_KEYS.forEach(k => {
+      if (params.has(k)) this.state.settings[k] = params.get(k) === "1";
+    });
+
+    const aspect = params.get("aspect");
+    if (aspect && this.state.resolutions[aspect]) this.state.settings.aspect = aspect;
+
+    return true;
+  },
+
+  copyShareLink() {
+    const btn = document.getElementById("copyShareLinkBtn");
+    const url = this.getShareURL();
+
+    const showCopied = () => {
+      if (!btn) return;
+      const original = btn.innerHTML;
+      btn.textContent = "Link Copied!";
+      setTimeout(() => { btn.innerHTML = original; }, 1600);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(showCopied).catch(() => window.prompt("Copy this link:", url));
+    } else {
+      window.prompt("Copy this link:", url);
+    }
+  },
+
+  // --- KEYBOARD SHORTCUTS ---
+  // Global shortcuts, ignored whenever focus is inside a form control so typing in
+  // sliders/selects/color pickers/text fields is never intercepted.
+  bindKeyboardShortcuts() {
+    const self = this;
+    document.addEventListener("keydown", (e) => {
+      const active = document.activeElement;
+      const tag = active && active.tagName;
+      const isEditable = tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || (active && active.isContentEditable);
+
+      if (e.key === "Escape") {
+        const backdrop = document.getElementById("shortcutsModalBackdrop");
+        if (backdrop && !backdrop.classList.contains("hidden")) backdrop.classList.add("hidden");
+        return;
+      }
+
+      if (isEditable) return;
+
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) self.history.redo(self.state);
+        else self.history.undo(self.state);
+        return;
+      }
+      if (mod) return; // leave other Ctrl/Cmd combos to the browser/OS
+
+      switch (e.key) {
+        case "s": case "S":
+          e.preventDefault();
+          document.getElementById("shuffleBtn").click();
+          break;
+        case "p": case "P":
+          e.preventDefault();
+          self.exportPNG();
+          break;
+        case "f": case "F":
+          e.preventDefault();
+          document.getElementById("fullScreenBtn").click();
+          break;
+        case " ":
+          e.preventDefault();
+          document.getElementById("pauseBtn").click();
+          break;
+        case "?":
+          e.preventDefault();
+          if (self.toggleShortcutsModal) self.toggleShortcutsModal();
+          break;
+        case "1": case "2": case "3": case "4": case "5": case "6": case "7": {
+          e.preventDefault();
+          const cards = document.querySelectorAll(".pattern-card");
+          const card = cards[parseInt(e.key, 10) - 1];
+          if (card) card.click();
+          break;
+        }
+      }
+    });
+  },
+
+  // --- ACCESSIBILITY HELPER ---
+  // Makes a plain clickable <div> keyboard-operable (Tab to focus, Enter/Space to
+  // activate) without changing its click-driven markup/CSS elsewhere in the app.
+  makeKeyboardActivatable(el, onActivate) {
+    el.setAttribute("role", "button");
+    if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "0");
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onActivate(e);
+      }
+    });
   },
 
   // Inject Curated Palettes List
@@ -767,19 +1033,26 @@ const App = {
         ${swatchesHtml}
       `;
 
-      item.addEventListener("click", () => {
-        document.querySelectorAll(".palette-item").forEach(p => p.classList.remove("active"));
+      const activate = () => {
+        document.querySelectorAll(".palette-item").forEach(p => { p.classList.remove("active"); p.setAttribute("aria-pressed", "false"); });
         item.classList.add("active");
+        item.setAttribute("aria-pressed", "true");
 
         self.state.colors = [...pal.colors];
         self.state.activePaletteKey = key;
-        
+
+        self.renderCustomSwatchEditor();
         self.history.saveState(self.state);
         self.triggerRender();
-      });
+      };
+      item.setAttribute("aria-pressed", item.classList.contains("active") ? "true" : "false");
+      item.addEventListener("click", activate);
+      self.makeKeyboardActivatable(item, activate);
 
       list.appendChild(item);
     }
+
+    this.renderCustomSwatchEditor();
   },
 
   // --- MOUSE CLICK/DRAG INTERACTIVE PHYSICS ---
@@ -869,19 +1142,51 @@ const App = {
   },
 
   // --- HIGH-RESOLUTION GRAPHICS EXPORT SYSTEMS ---
+
+  // toDataURL()/large SVG string-building block the main thread on 4K canvases (can take
+  // 500ms-2s). Swap the trigger button to a disabled "busy" label first, and defer the
+  // blocking work one tick so the browser gets a chance to paint that state.
+  setExportBusy(btn, label) {
+    if (!btn || btn.dataset.busy === "1") return;
+    btn.dataset.busy = "1";
+    btn.dataset.originalLabel = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = label;
+  },
+  clearExportBusy(btn) {
+    if (!btn) return;
+    btn.disabled = false;
+    if (btn.dataset.originalLabel) btn.innerHTML = btn.dataset.originalLabel;
+    delete btn.dataset.busy;
+  },
+
   exportPNG() {
-    // Canvas download triggers matching selected resolutions
-    const link = document.createElement("a");
-    link.download = `geometric_wallpaper_${this.state.pattern}_${Date.now()}.png`;
-    
-    // Draw current static state high-res
-    this.triggerRender();
-    
-    link.href = this.canvas.toDataURL("image/png");
-    link.click();
+    const btn = document.getElementById("downloadPngBtn");
+    this.setExportBusy(btn, "Rendering...");
+    setTimeout(() => {
+      // Canvas download triggers matching selected resolutions
+      const link = document.createElement("a");
+      link.download = `geometric_wallpaper_${this.state.pattern}_${Date.now()}.png`;
+
+      // Draw current static state high-res
+      this.triggerRender();
+
+      link.href = this.canvas.toDataURL("image/png");
+      link.click();
+      this.clearExportBusy(btn);
+    }, 0);
   },
 
   exportSVG() {
+    const btn = document.getElementById("downloadSvgBtn");
+    this.setExportBusy(btn, "Rendering...");
+    setTimeout(() => {
+      this._buildAndDownloadSVG();
+      this.clearExportBusy(btn);
+    }, 0);
+  },
+
+  _buildAndDownloadSVG() {
     // Constructs an exact mathematical vector file of active paths!
     const w = this.canvas.width;
     const h = this.canvas.height;
@@ -1038,12 +1343,12 @@ const App = {
       card.innerHTML = `
         <img src="${fav.thumbnail}" alt="Saved Geometric Style">
         <div class="card-actions">
-          <div class="action-icon load-btn" title="Load Style">
+          <div class="action-icon load-btn" title="Load Style" aria-label="Load Saved Style">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
             </svg>
           </div>
-          <div class="action-icon del-btn" title="Delete Style">
+          <div class="action-icon del-btn" title="Delete Style" aria-label="Delete Saved Style">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -1055,24 +1360,34 @@ const App = {
       `;
 
       // Load action bindings
-      card.querySelector(".load-btn").addEventListener("click", (e) => {
+      const loadBtn = card.querySelector(".load-btn");
+      const doLoad = (e) => {
         e.stopPropagation();
         self.history.applyState(self.state, fav);
-      });
+      };
+      loadBtn.addEventListener("click", doLoad);
+      self.makeKeyboardActivatable(loadBtn, doLoad);
 
       // Delete action bindings
-      card.querySelector(".del-btn").addEventListener("click", (e) => {
+      const delBtn = card.querySelector(".del-btn");
+      const doDelete = (e) => {
         e.stopPropagation();
         let currentGallery = JSON.parse(localStorage.getItem("geometric_gallery"));
         currentGallery = currentGallery.filter(item => item.id !== fav.id);
         localStorage.setItem("geometric_gallery", JSON.stringify(currentGallery));
         self.loadFavorites();
-      });
+      };
+      delBtn.addEventListener("click", doDelete);
+      self.makeKeyboardActivatable(delBtn, doDelete);
 
       grid.appendChild(card);
     });
   }
 };
+
+// Expose on window, matching Palettes/Patterns, so other scripts (e.g. the test suite
+// driving this app inside an iframe) can reach it as `window.App`.
+window.App = App;
 
 // Bootstrap app on window load event
 window.addEventListener("DOMContentLoaded", () => {

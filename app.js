@@ -117,16 +117,20 @@ const App = {
     this.canvas = document.getElementById("mainCanvas");
     this.ctx = this.canvas.getContext("2d");
     this.viewport = document.getElementById("viewport");
-    
+
     // Animation tick parameters
     this.time = 0;
     this.lastTime = 0;
     this.isMorphing = true;
     this.paused = false;
-    
+
     // Interaction physics
     this.draggedPoint = null;
     this.dragThreshold = 40;
+
+    // Apply the saved interface theme first, before other UI setup, to minimize any
+    // flash of the default theme.
+    this.initTheme();
 
     // Load initial states
     this.setupUIBindings();
@@ -402,6 +406,10 @@ const App = {
         collapseBtn.title = "Hide Control Panel";
         collapseIcon.innerHTML = `<polyline points="9 18 15 12 9 6"></polyline>`;
       }
+      // The sidebar is now a real flex sibling (not an overlay), so collapsing/expanding
+      // it actually changes the canvas viewport's available width — rescale the canvas
+      // to fit once the width transition settles.
+      setTimeout(() => self.resizeCanvas(), 320);
     });
     collapseBtn.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
@@ -793,6 +801,30 @@ const App = {
     });
 
     this.renderCustomSwatchEditor();
+  },
+
+  // --- INTERFACE THEME (app chrome only — separate from the wallpaper's own color
+  // palette in the Colors tab). Persisted to localStorage so it survives reloads.
+  initTheme() {
+    const saved = localStorage.getItem("geometric_ui_theme") || "midnight-gold";
+    this.applyTheme(saved);
+
+    document.querySelectorAll(".theme-swatch").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const theme = btn.getAttribute("data-theme");
+        this.applyTheme(theme);
+        localStorage.setItem("geometric_ui_theme", theme);
+      });
+    });
+  },
+
+  applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    document.querySelectorAll(".theme-swatch").forEach(btn => {
+      const isActive = btn.getAttribute("data-theme") === theme;
+      btn.classList.toggle("active", isActive);
+      btn.setAttribute("aria-checked", isActive ? "true" : "false");
+    });
   },
 
   // Highlights whichever palette card matches state.activePaletteKey (no-op / clears

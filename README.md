@@ -27,6 +27,7 @@ A premium, fully interactive generative art engine that creates stunning mathema
 - **Undo/Redo**: 30-step history stack
 - **Keyboard Shortcuts**: quick pattern switching, shuffle, export, fullscreen, pause — see the in-app `?` legend
 - **Accessible Controls**: pattern/ratio/palette cards and gallery actions are keyboard-operable with visible focus states
+- **Interface Themes**: 4 UI chrome presets (Midnight Gold, Cyberpunk Neon, Ocean Slate, Minimal Light) — separate from the wallpaper's own color palette, persisted across sessions
 - **Responsive Mobile UI**: Draggable/collapsible bottom-sheet control panel with reliable touch support
 
 ## Tech Stack
@@ -64,6 +65,10 @@ Deployed on Netlify (`netlify.toml` sets security headers and long-term caching 
 
 MIT
 
+## Credits
+
+Created by [John Ngigi](https://github.com/ngigijohn) — repo: [github.com/ngigijohn/geometric-wallpapers](https://github.com/ngigijohn/geometric-wallpapers)
+
 ---
 
 ## Project Status / TODO
@@ -89,6 +94,10 @@ MIT
 - [x] Keyboard shortcuts for common actions (undo/redo, shuffle, export, fullscreen, pause, pattern switching) with an in-app legend
 - [x] Accessibility pass: keyboard-operable pattern/ratio/palette cards and gallery actions, ARIA roles/pressed states, visible focus styles, labeled canvas
 - [x] README screenshots of each pattern engine
+- [x] Fixed canvas/panel overlap: sidebar is now a real flex layout sibling (not an absolutely positioned overlay), so the wallpaper never renders — visibly blurred — underneath the glass panel
+- [x] Interface theme presets (Midnight Gold, Cyberpunk Neon, Ocean Slate, Minimal Light) for the app's own UI chrome, persisted via localStorage
+- [x] Verified all 12 tuning sliders (density, randomness, scale, stroke width, cell gap, symmetry, grain, glow, cube size, wave position, morph speed/amplitude) produce a measurably different render at their min/max extremes
+- [x] Creator credit + GitHub link in the in-app sidebar footer and README
 
 ### Not Yet Done / Ideas
 - [ ] Real iOS/Android device testing (the QA pass above uses emulated touch, which doesn't fully reproduce native mobile gesture heuristics)

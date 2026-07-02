@@ -6,6 +6,12 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
+/* --- INTERFACE THEME SYSTEM ---
+   :root holds the default "Midnight Gold" theme. Every other preset overrides the same
+   variable set via [data-theme="..."] on <html> (set by app.js / persisted to
+   localStorage). Only chrome tokens are themed here — the canvas/artwork background
+   (#030303 etc.) intentionally stays fixed regardless of UI theme, since it's the
+   generated wallpaper's own stage, not app chrome. */
 :root {
   --bg-dark: #070709;
   --bg-panel: rgba(13, 13, 17, 0.7);
@@ -19,12 +25,83 @@
   --accent-glow: rgba(197, 160, 89, 0.4);
   --glow-teal: #66fcf1;
   --glow-pink: #f72585;
+
+  /* Recessed/"sunken" card surfaces (pattern cards, palette items, tab nav, etc.) */
+  --surface-sunken: rgba(0, 0, 0, 0.2);
+  --surface-sunken-strong: rgba(0, 0, 0, 0.3);
+  /* Hover/interactive surface tint — lightens on dark themes, darkens on light ones */
+  --surface-hover: rgba(255, 255, 255, 0.06);
+  --surface-hover-strong: rgba(255, 255, 255, 0.14);
+  --handle-pill: rgba(255, 255, 255, 0.35);
+  --trigger-bg: #16161c;
+  --trigger-bg-hover: #1f1f27;
+
   --sidebar-width: 380px;
   --radius-lg: 16px;
   --radius-md: 10px;
   --radius-sm: 6px;
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --shadow-panel: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-glass);
+}
+
+[data-theme="cyberpunk"] {
+  --bg-dark: #05070c;
+  --bg-panel: rgba(8, 14, 22, 0.72);
+  --bg-panel-solid: #080e16;
+  --bg-active: rgba(102, 252, 241, 0.12);
+  --border-glass: rgba(102, 252, 241, 0.14);
+  --border-active: rgba(102, 252, 241, 0.35);
+  --text-primary: #eafffe;
+  --text-secondary: #85a8a5;
+  --accent: #66fcf1;
+  --accent-glow: rgba(102, 252, 241, 0.4);
+  --surface-sunken: rgba(0, 0, 0, 0.25);
+  --surface-sunken-strong: rgba(0, 0, 0, 0.35);
+  --surface-hover: rgba(102, 252, 241, 0.06);
+  --surface-hover-strong: rgba(102, 252, 241, 0.14);
+  --handle-pill: rgba(102, 252, 241, 0.4);
+  --trigger-bg: #0a1216;
+  --trigger-bg-hover: #0f1b20;
+}
+
+[data-theme="ocean"] {
+  --bg-dark: #060c12;
+  --bg-panel: rgba(10, 20, 30, 0.72);
+  --bg-panel-solid: #0a141e;
+  --bg-active: rgba(79, 176, 216, 0.12);
+  --border-glass: rgba(120, 180, 210, 0.12);
+  --border-active: rgba(120, 180, 210, 0.3);
+  --text-primary: #eef6fa;
+  --text-secondary: #8fa8b5;
+  --accent: #4fb0d8;
+  --accent-glow: rgba(79, 176, 216, 0.4);
+  --surface-sunken: rgba(0, 0, 0, 0.22);
+  --surface-sunken-strong: rgba(0, 0, 0, 0.32);
+  --surface-hover: rgba(255, 255, 255, 0.06);
+  --surface-hover-strong: rgba(255, 255, 255, 0.14);
+  --handle-pill: rgba(255, 255, 255, 0.35);
+  --trigger-bg: #0a141c;
+  --trigger-bg-hover: #101e28;
+}
+
+[data-theme="light"] {
+  --bg-dark: #f2f2f4;
+  --bg-panel: rgba(255, 255, 255, 0.78);
+  --bg-panel-solid: #ffffff;
+  --bg-active: rgba(0, 0, 0, 0.06);
+  --border-glass: rgba(0, 0, 0, 0.09);
+  --border-active: rgba(0, 0, 0, 0.2);
+  --text-primary: #17171a;
+  --text-secondary: #65656d;
+  --accent: #a8763a;
+  --accent-glow: rgba(168, 118, 58, 0.35);
+  --surface-sunken: rgba(0, 0, 0, 0.04);
+  --surface-sunken-strong: rgba(0, 0, 0, 0.07);
+  --surface-hover: rgba(0, 0, 0, 0.045);
+  --surface-hover-strong: rgba(0, 0, 0, 0.08);
+  --handle-pill: rgba(0, 0, 0, 0.22);
+  --trigger-bg: #ffffff;
+  --trigger-bg-hover: #f0f0f0;
 }
 
 * {
@@ -60,6 +137,7 @@ h1, h2, h3, h4 {
 /* Canvas Viewport */
 .canvas-viewport {
   flex: 1;
+  min-width: 0; /* allow the flex item to shrink below its content size next to the sidebar */
   position: relative;
   height: 100%;
   display: flex;
@@ -78,13 +156,15 @@ h1, h2, h3, h4 {
   background-color: #050505;
 }
 
-/* Floating Sidebar Dashboard */
+/* Sidebar Dashboard — a real flex sibling of .canvas-viewport (not an absolutely
+   positioned overlay), so the canvas never renders underneath it. Previously this was
+   `position: absolute`, which left the canvas at full width behind the (semi-transparent,
+   blurred) panel — visible artwork bleeding through the glass. */
 .sidebar-dashboard {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  bottom: 20px;
+  position: relative;
+  flex: 0 0 var(--sidebar-width);
   width: var(--sidebar-width);
+  margin: 20px 20px 20px 0;
   background: var(--bg-panel);
   backdrop-filter: blur(20px) saturate(160%);
   border: 1px solid var(--border-glass);
@@ -98,7 +178,11 @@ h1, h2, h3, h4 {
 }
 
 .sidebar-dashboard.collapsed {
-  transform: translateX(calc(100% + 40px));
+  flex-basis: 0;
+  width: 0;
+  margin-left: 0;
+  margin-right: 0;
+  border-width: 0;
   opacity: 0;
   pointer-events: none;
 }
@@ -125,7 +209,7 @@ h1, h2, h3, h4 {
 }
 
 .ui-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--surface-hover-strong);
   border-color: var(--border-active);
   transform: scale(1.05);
 }
@@ -149,7 +233,7 @@ h1, h2, h3, h4 {
 }
 
 .sidebar-header h1 span {
-  background: linear-gradient(135deg, var(--accent) 0%, #ecd79c 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 55%, white) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -159,11 +243,74 @@ h1, h2, h3, h4 {
   color: var(--text-secondary);
 }
 
+/* Interface theme presets */
+.theme-swatch-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.theme-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  border: 2px solid transparent;
+  background: linear-gradient(135deg, var(--swatch-a) 50%, var(--swatch-b) 50%);
+  transition: var(--transition-smooth);
+}
+
+.theme-swatch:hover {
+  transform: scale(1.1);
+}
+
+.theme-swatch.active {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 2px var(--bg-panel-solid), 0 0 8px var(--accent-glow);
+}
+
+/* Credits Footer */
+.sidebar-footer {
+  flex-shrink: 0;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-glass);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.sidebar-footer strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.sidebar-footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: var(--transition-smooth);
+}
+
+.sidebar-footer a:hover {
+  color: var(--accent);
+}
+
+.sidebar-footer a svg {
+  fill: currentColor;
+}
+
 /* Tab Navigation */
 .tab-navigation {
   display: flex;
   border-bottom: 1px solid var(--border-glass);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface-sunken);
 }
 
 .tab-btn {
@@ -233,14 +380,14 @@ h1, h2, h3, h4 {
   width: 6px;
 }
 .tab-content::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--surface-sunken);
 }
 .tab-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-hover-strong);
   border-radius: var(--radius-sm);
 }
 .tab-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--border-active);
 }
 
 /* --- CONTROL MODULES --- */
@@ -273,7 +420,7 @@ h1, h2, h3, h4 {
 }
 
 .pattern-card {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface-sunken);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-md);
   padding: 16px 12px;
@@ -301,14 +448,14 @@ h1, h2, h3, h4 {
 }
 
 .pattern-card:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--surface-hover);
+  border-color: var(--border-active);
 }
 
 .pattern-card.active {
-  background: rgba(197, 160, 89, 0.08);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   border-color: var(--accent);
-  box-shadow: 0 0 15px rgba(197, 160, 89, 0.15);
+  box-shadow: 0 0 15px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 .pattern-card.active svg {
@@ -326,7 +473,7 @@ input[type="range"] {
   width: 100%;
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-hover-strong);
   outline: none;
   transition: var(--transition-smooth);
 }
@@ -340,7 +487,7 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--text-primary);
   border: 2px solid var(--accent);
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(197, 160, 89, 0.4);
+  box-shadow: 0 0 10px var(--accent-glow);
   transition: var(--transition-smooth);
 }
 
@@ -351,7 +498,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 /* Select Dropdown */
 select {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--surface-sunken-strong);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-md);
   padding: 10px 14px;
@@ -406,7 +553,7 @@ select:focus {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--surface-hover-strong);
   transition: .4s;
   border-radius: 22px;
   border: 1px solid var(--border-glass);
@@ -425,7 +572,7 @@ select:focus {
 }
 
 input:checked + .slider {
-  background-color: rgba(197, 160, 89, 0.2);
+  background-color: color-mix(in srgb, var(--accent) 20%, transparent);
   border-color: var(--accent);
 }
 
@@ -442,7 +589,7 @@ input:checked + .slider:before {
 }
 
 .palette-item {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface-sunken);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-md);
   padding: 12px;
@@ -455,12 +602,12 @@ input:checked + .slider:before {
 
 .palette-item:hover {
   border-color: var(--border-active);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-hover);
 }
 
 .palette-item.active {
   border-color: var(--accent);
-  background: rgba(197, 160, 89, 0.05);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
 .palette-meta {
@@ -502,7 +649,7 @@ input:checked + .slider:before {
 
 /* Color Harmonizer and Picker Box */
 .harmony-editor {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface-sunken);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-md);
   padding: 16px;
@@ -571,7 +718,7 @@ input:checked + .slider:before {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--surface-hover);
   color: var(--text-primary);
   border: 1px solid var(--border-glass);
 }
@@ -581,7 +728,7 @@ input:checked + .slider:before {
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-hover-strong);
   border-color: var(--border-active);
   box-shadow: none;
 }
@@ -620,7 +767,7 @@ input:checked + .slider:before {
 }
 
 .ratio-card {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface-sunken);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-md);
   padding: 14px 10px;
@@ -645,12 +792,12 @@ input:checked + .slider:before {
 .ratio-icon.tablet { width: 22px; height: 28px; }
 
 .ratio-card:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-hover);
 }
 
 .ratio-card.active {
   border-color: var(--accent);
-  background: rgba(197, 160, 89, 0.08);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .ratio-card.active .ratio-icon {
@@ -689,7 +836,7 @@ input:checked + .slider:before {
 }
 
 .gallery-card {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--surface-sunken-strong);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-md);
   aspect-ratio: 16/10;
@@ -810,7 +957,7 @@ input:checked + .slider:before {
 }
 
 .control-circle:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--surface-hover-strong);
   border-color: var(--border-active);
   transform: scale(1.05);
 }
@@ -821,29 +968,46 @@ input:checked + .slider:before {
 }
 
 /* --- COLLAPSE BUTTON INTEGRATED ON SIDEBAR --- */
+/* Positioned relative to .app-container (not .sidebar-dashboard) and placed after it
+   in the DOM, so it stays visible and clickable even while the sidebar itself is faded
+   out / pointer-events:none in its collapsed state — otherwise there'd be no way to
+   bring the panel back once collapsed. */
 .sidebar-collapse-trigger {
   position: absolute;
   top: 50%;
-  left: 0;
-  transform: translate(-100%, -50%);
+  right: calc(var(--sidebar-width) + 20px);
+  transform: translateY(-50%);
   width: 24px;
   height: 60px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-glass);
+  /* Solid (not the sidebar's translucent glass) + an accent-tinted border so this stays
+     legible against the near-black canvas backdrop it sits on top of. */
+  background: var(--trigger-bg);
+  border: 1px solid var(--accent);
   border-right: none;
   border-radius: var(--radius-md) 0 0 var(--radius-md);
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  box-shadow: -10px 0 30px rgba(0,0,0,0.3);
+  box-shadow: -6px 0 20px rgba(0, 0, 0, 0.5), 0 0 10px var(--accent-glow);
   transition: var(--transition-smooth);
+  z-index: 15;
+}
+
+.sidebar-collapse-trigger:hover {
+  background: var(--trigger-bg-hover);
+  box-shadow: -6px 0 20px rgba(0, 0, 0, 0.5), 0 0 16px var(--accent-glow);
+}
+
+/* Slide the tab to the screen edge to match the sidebar sliding away */
+#sidebar.collapsed ~ .sidebar-collapse-trigger {
+  right: 0;
 }
 
 .sidebar-collapse-trigger svg {
-  width: 12px;
-  height: 12px;
-  stroke: var(--text-secondary);
+  width: 13px;
+  height: 13px;
+  stroke: var(--accent);
   transition: var(--transition-smooth);
 }
 
@@ -866,13 +1030,13 @@ input:checked + .slider:before {
      breaks both tap-to-toggle and drag-to-resize on touch devices. */
   touch-action: none;
   border-bottom: 1px solid var(--border-glass);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-hover);
 }
 
 .sheet-handle-pill {
   width: 44px;
   height: 5px;
-  background: rgba(255, 255, 255, 0.35);
+  background: var(--handle-pill);
   border-radius: 3px;
   transition: background 0.2s ease;
 }
@@ -1014,6 +1178,8 @@ input:checked + .slider:before {
 .tab-btn:focus-visible,
 .control-circle:focus-visible,
 .btn:focus-visible,
+.theme-swatch:focus-visible,
+.sidebar-footer a:focus-visible,
 #mainCanvas:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
